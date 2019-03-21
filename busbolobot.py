@@ -1,6 +1,7 @@
 ﻿import collections
 import sys
 import math
+from datetime import datetime
 import time
 import xml.etree.ElementTree as ET
 import requests
@@ -85,15 +86,47 @@ def makeRecentKeyboard(chat_id):
 
 def parseResponse(text):
     try:
-        nextArr = tent.split(sep=",")
-        first = nextArr[0].strip()
+        nextArr = text.split(sep=",")
+        first = nextArr[0][14:].strip()
         second = nextArr[1].strip()
-        print(first)
-        print(second)
-        print(nextArr)
-        return text
+        firstInfo = first.split() 
+        secondInfo = second.split() 
+        result = list()
+        result.append("TperHellobus:\n") 
+        result.append("["+firstInfo[0]+"] -> ")
+        
+        if firstInfo[1] == "DaSatellite":
+            result.append("Da satellite ")
+        else:
+            result.append("Da orario ")
+        
+        tdiff = datetime.strptime(firstInfo[2],'%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
+
+        diff = datetime.strptime("0:05",'%H:%M') - datetime.strptime(time.strftime('23:50'), '%H:%M')
+        int(tdiff.seconds/60)
+
+        result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ firstInfo[2] +")\n")
+        
+        result.append("["+secondInfo[0]+"] -> ")
+        
+        if secondInfo[1] == "DaSatellite":
+            result.append("Da satellite ")
+        else:
+            result.append("Da orario ")
+        
+        tdiff = datetime.strptime(secondInfo[2],'%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
+
+        diff = datetime.strptime("0:05",'%H:%M') - datetime.strptime(time.strftime('23:50'), '%H:%M')
+        int(tdiff.seconds/60)
+
+
+        result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ secondInfo[2] +")")
+
+        
+
+        return "".join(result)
     except:
-        return text
+       return text
 
 
 def makeReq(stop, line, time):
@@ -125,10 +158,12 @@ def on_chat_message(msg):
 
     if content_type == "text":
         if (msg["text"] == "/start"):
-            output_string = "TPER HelloBus on Telegram!"
+            output_string = "TPER HelloBus on Telegram!\n""Invia\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema."
+    
+
             bot.sendMessage(chat_id, output_string, reply_markup=ReplyKeyboardRemove())
         elif (msg["text"] == "/help"):
-            output_string ="Invia\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\ninvia la tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema."
+            output_string ="Invia\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema."
     
             bot.sendMessage(chat_id, donation_string)
             bot.sendMessage(chat_id, output_string, reply_markup=ReplyKeyboardRemove())
@@ -156,9 +191,10 @@ def on_chat_message(msg):
             lat_fermata = child[7].text
             lon_fermata = child[8].text
             
-            if(distance(float(lat_user), float(lon_user), float(lat_fermata), float(lon_fermata)) < 5):
+            dist = distance(float(lat_user), float(lon_user), float(lat_fermata), float(lon_fermata)) 
+            if(dist < 15):
                 
-                element = nome_fermata + " (" + id_fermata + ")"
+                element = id_fermata + " - "+ nome_fermata + " ("+ repr(int(dist)) +" m)"
                 d[element].append(linea)
                 stringList.append(id_fermata + " "+linea)
         
