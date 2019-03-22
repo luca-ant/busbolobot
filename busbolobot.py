@@ -1,11 +1,11 @@
 ﻿import collections
 import sys
 import math
-from datetime import datetime
 import time
 import xml.etree.ElementTree as ET
 import requests
 import telepot
+from datetime import datetime
 from collections import defaultdict
 from telepot.loop import MessageLoop
 from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
@@ -23,23 +23,15 @@ file_xml_fermate = "lineefermate_20190301.xml"
 tree = ET.parse(file_xml_fermate)
 xml_root = tree.getroot()
 
-
-
 dictUserFavourites = collections.defaultdict(list)
 
 
 def addLastReq(chat_id, req):
-    if req not in dictUserFavourites[chat_id]:
-        if len(dictUserFavourites[chat_id]) >= 3:
+    if req not in dictUserFavourites[chat_id] and req.replace(" ", "").isdigit():
+        if len(dictUserFavourites[chat_id]) >= 6:
             dictUserFavourites[chat_id].pop(0)
 
-        dictUserFavourites[chat_id].append(req)
-
-
-
-
-
-
+        dictUserFavourites[chat_id].append(req.strip())
 
 def distance(lat_user, lon_user, lat_stop, lon_stop):
     r = 6372.795477598
@@ -77,10 +69,14 @@ def makeLocationKeyboard(stringList):
 def makeRecentKeyboard(chat_id):
 
     buttonLists = list()
+    for i in range(0, int(len(dictUserFavourites[chat_id])/3)+1, 1):
+        buttonLists.append(list())
 
-    buttonLists.append(list())
-    buttonLists[0] = dictUserFavourites[chat_id]
-
+    if len(dictUserFavourites[chat_id]) > 3:
+        buttonLists[0] = dictUserFavourites[chat_id][:3]
+        buttonLists[1] = dictUserFavourites[chat_id][3:]
+    else:
+        buttonLists[0] = dictUserFavourites[chat_id]
     keyboard = ReplyKeyboardMarkup(keyboard=buttonLists,resize_keyboard=True)
     return keyboard 
 
@@ -121,8 +117,6 @@ def parseResponse(text):
 
 
         result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ secondInfo[2] +")")
-
-        
 
         return "".join(result)
     except:
