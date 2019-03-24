@@ -15,7 +15,19 @@ with open(sys.argv[1]) as f:
 f.close()
 
 bot = telepot.Bot(token)
-donation_string = "Se ti è piacuto questo bot e vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant"
+
+emo_clock = u'\U0001F552'
+emo_sat = u'\U0001F6F0'
+emo_ita = u'\U0001F1EE'u'\U0001F1F9'
+emo_eng = u'\U0001F1EC'u'\U0001F1E7'
+emo_bus = u'\U0001F68C'
+emo_money = u'\U0001F4B5'
+
+
+donation_string =emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n"+emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
+
+help_string =emo_ita + " ITALIANO\n"+ "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n"+ emo_eng + " ENGLISH\n"+"Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail." 
+
 url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
 
 file_xml_fermate = "lineefermate_20190301.xml"
@@ -48,15 +60,15 @@ def distance(lat_user, lon_user, lat_stop, lon_stop):
     distance = p * r *1000
     return distance
 
-def makeLocationKeyboard(stringList):
+def makeLocationKeyboard(stringKeyboardList):
 
     buttonLists = list()
 
-    for i in range(0, int(len(stringList)/3)+1, 1):
+    for i in range(0, int(len(stringKeyboardList)/3)+1, 1):
        buttonLists.append(list())
     i = 0
     index = 0
-    for str in stringList:
+    for str in stringKeyboardList:
         buttonLists[index].append(str)
         i += 1
         if i % 3 == 0:
@@ -84,45 +96,74 @@ def parseResponse(text):
     try:
         nextArr = text.split(sep=",")
         first = nextArr[0][14:].strip()
-        second = nextArr[1].strip()
         firstInfo = first.split() 
-        secondInfo = second.split() 
         result = list()
         result.append("TperHellobus:\n") 
-        result.append("["+firstInfo[0]+"] -> ")
+        result.append(emo_bus+ " ["+firstInfo[0]+"] " )
         
         if firstInfo[1] == "DaSatellite":
-            result.append("Da satellite ")
+            result.append(emo_sat + " DA SATELLITE ")
         else:
-            result.append("Da orario ")
+            result.append(emo_clock+ " DA ORARIO ")
         
         tdiff = datetime.strptime(firstInfo[2],'%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
 
-        diff = datetime.strptime("0:05",'%H:%M') - datetime.strptime(time.strftime('23:50'), '%H:%M')
-        int(tdiff.seconds/60)
-
-        result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ firstInfo[2] +")\n")
-        
-        result.append("["+secondInfo[0]+"] -> ")
-        
-        if secondInfo[1] == "DaSatellite":
-            result.append("Da satellite ")
-        else:
-            result.append("Da orario ")
-        
-        tdiff = datetime.strptime(secondInfo[2],'%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
-
-        diff = datetime.strptime("0:05",'%H:%M') - datetime.strptime(time.strftime('23:50'), '%H:%M')
-        int(tdiff.seconds/60)
-
-
-        result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ secondInfo[2] +")")
+        result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ firstInfo[2] +")")
+       
+        if len(nextArr)>1:
+            second = nextArr[1].strip()
+            secondInfo = second.split() 
+            
+            result.append("\n"+emo_bus+ " ["+secondInfo[0]+"] ")
+            
+            if secondInfo[1] == "DaSatellite":
+                result.append(emo_sat + " DA SATELLITE ")
+            else:
+                result.append(emo_clock+ " DA ORARIO ")
+            
+            tdiff = datetime.strptime(secondInfo[2],'%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
+            result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ secondInfo[2] +")")
 
         return "".join(result)
     except:
        return text
 
 
+def makeNearbyOutput(lat_user, lon_user):
+    result = collections.defaultdict()
+    busLines = collections.defaultdict(list)
+    output = list()
+    stringKeyboardList = list()
+    output.append(emo_ita + " FERMATE VICINE\n" + emo_eng+" NEARBY STOPS\n\n")
+    for child in xml_root:
+        linea = child[0].text
+        id_fermata = child[1].text
+        nome_fermata = child[2].text
+        lat_fermata = child[7].text
+        lon_fermata = child[8].text
+        
+        dist = distance(float(lat_user), float(lon_user), float(lat_fermata), float(lon_fermata)) 
+        if(dist < 25):
+            
+            element = id_fermata + " - "+ nome_fermata + " ("+ repr(int(dist)) +" m)"
+            busLines[element].append(linea)
+            stringKeyboardList.append(id_fermata + " "+linea)
+            if id_fermata not in stringKeyboardList:
+                stringKeyboardList.append(id_fermata)
+
+    for s in busLines.keys():
+        output.append(s)
+        output.append("\n")
+        output.append("Linee: ")
+        for n in busLines[s]:
+            output.append(n + " ")
+        output.append("\n\n")
+    
+    stringKeyboardList.sort()
+    result["stringKeyboardList"] = stringKeyboardList
+    result["output_string"] = "".join(output)
+    return result
+    
 def makeReq(stop, line, time):
 
     body = "fermata="+stop+"&linea="+ line +"&oraHHMM="+time
@@ -149,70 +190,39 @@ def getStopInfo(params):
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
     #print(msg) 
+    try:
+        if content_type == "text":
+            if (msg["text"] == "/start"):
+                output_string = emo_bus + " TPER HelloBus on Telegram! "+ emo_bus +"\n\n"+ help_string
+                bot.sendMessage(chat_id, output_string, reply_markup=ReplyKeyboardRemove())
+            elif (msg["text"] == "/help"):
+        
+                bot.sendMessage(chat_id, donation_string)
+                bot.sendMessage(chat_id, help_string, reply_markup=makeRecentKeyboard(chat_id))
+            else:
+                params = msg["text"].split()
+                output_string = getStopInfo(params)
+                addLastReq(chat_id, msg["text"])
+                bot.sendMessage(chat_id, donation_string)
+                bot.sendMessage(chat_id, output_string, reply_markup=makeRecentKeyboard(chat_id))
 
-    if content_type == "text":
-        if (msg["text"] == "/start"):
-            output_string = "TPER HelloBus on Telegram!\n""Invia\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema."
-    
-
-            bot.sendMessage(chat_id, output_string, reply_markup=ReplyKeyboardRemove())
-        elif (msg["text"] == "/help"):
-            output_string ="Invia\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema."
-    
+        
+        elif content_type == "location":
+            lat_user = msg["location"]["latitude"]
+            lon_user = msg["location"]["longitude"]
+       
+            output = makeNearbyOutput(lat_user, lon_user) 
             bot.sendMessage(chat_id, donation_string)
-            bot.sendMessage(chat_id, output_string, reply_markup=ReplyKeyboardRemove())
+
+            bot.sendMessage(chat_id, output["output_string"], reply_markup=makeLocationKeyboard(output["stringKeyboardList"]))
+
         else:
-            params = msg["text"].split()
-            output_string = getStopInfo(params)
-            addLastReq(chat_id, msg["text"])
-            bot.sendMessage(chat_id, donation_string)
-            bot.sendMessage(chat_id, output_string, reply_markup=makeRecentKeyboard(chat_id))
+            output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
+            bot.sendMessage(chat_id, output_string)
+    except:
 
-    
-    elif content_type == "location":
-
-        
-        lat_user = msg["location"]["latitude"]
-        lon_user = msg["location"]["longitude"]
-        d = collections.defaultdict(list)
-        output = []
-        stringList = []
-        output.append("FERMATE VICINE:\n\n")
-        for child in xml_root:
-            linea = child[0].text
-            id_fermata = child[1].text
-            nome_fermata = child[2].text
-            lat_fermata = child[7].text
-            lon_fermata = child[8].text
-            
-            dist = distance(float(lat_user), float(lon_user), float(lat_fermata), float(lon_fermata)) 
-            if(dist < 15):
-                
-                element = id_fermata + " - "+ nome_fermata + " ("+ repr(int(dist)) +" m)"
-                d[element].append(linea)
-                stringList.append(id_fermata + " "+linea)
-        
-
-        for s in d.keys():
-            output.append(s)
-            output.append("\n")
-            output.append("Linee: ")
-            for n in d[s]:
-                output.append(n + " ")
-        
-            output.append("\n\n")
-        
-        
-        stringList.sort()
-        output_string = "".join(output)
-        bot.sendMessage(chat_id, donation_string)
-
-        bot.sendMessage(chat_id, output_string, reply_markup=makeLocationKeyboard(stringList))
-
-    else:
-        output_string = "Non ho capito... Invia un messaggio di testo o la tua posizione!"
+        output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
         bot.sendMessage(chat_id, output_string)
-
 
 
 MessageLoop(bot, {'chat': on_chat_message}).run_as_thread()
