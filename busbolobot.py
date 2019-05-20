@@ -12,7 +12,7 @@ from datetime import datetime
 from collections import defaultdict
 from telepot.loop import MessageLoop
 from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-
+from threading import Lock
 
 
 with open(sys.argv[1]) as f:
@@ -46,6 +46,15 @@ dirtyBitFavouritesList = collections.defaultdict()
 
 logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
 
+writer_lock = Lock()
+
+
+
+
+
+
+
+
 def restoreFavourites():
     if os.path.isfile(favourite_filename):
         try:
@@ -71,6 +80,7 @@ def addLastReq(chat_id, req):
 
 
 def storeFavourites():
+#    writer_lock.acquire()
     dirty = False
     for key in dirtyBitFavouritesList.keys():
         if dirtyBitFavouritesList[key] == 1:
@@ -87,6 +97,8 @@ def storeFavourites():
 
         except Exception as e:
             print(repr(e))
+#    writer_lock.release()
+
 
 
 def distance(lat_user, lon_user, lat_stop, lon_stop):
