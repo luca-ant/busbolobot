@@ -35,7 +35,7 @@ help_string = emo_ita + " ITALIANO\n"+ "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUM
 
 url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
 
-file_xml_fermate = "lineefermate_20190301.xml"
+file_xml_fermate = "lineefermate_20190511.xml"
 favourite_filename = "favourite.csv"
 
 tree = ET.parse(file_xml_fermate)
@@ -59,8 +59,6 @@ def restoreFavourites():
         except Exception as e:
             print(repr(e))
 
-    print(dictUserFavourites)
-
 
 def addLastReq(chat_id, req):
     dirtyBitFavouritesList[chat_id] = 0
@@ -69,7 +67,6 @@ def addLastReq(chat_id, req):
         if len(dictUserFavourites[chat_id]) >= 9:
             dictUserFavourites[chat_id].pop(0)
         dictUserFavourites[chat_id].append(req.strip())
-    print(dictUserFavourites)
     storeFavourites()
 
 
