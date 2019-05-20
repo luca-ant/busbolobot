@@ -1,7 +1,10 @@
-﻿import collections
+﻿import os
+import csv
+import collections
 import sys
 import math
 import time
+import logging
 import xml.etree.ElementTree as ET
 import requests
 import telepot
@@ -9,6 +12,8 @@ from datetime import datetime
 from collections import defaultdict
 from telepot.loop import MessageLoop
 from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+
+
 
 with open(sys.argv[1]) as f:
     token = f.read().strip()
@@ -24,26 +29,68 @@ emo_bus = u'\U0001F68C'
 emo_money = u'\U0001F4B5'
 
 
-donation_string =emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n"+emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
+donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n"+emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
 
-help_string =emo_ita + " ITALIANO\n"+ "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n"+ emo_eng + " ENGLISH\n"+"Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail." 
+help_string = emo_ita + " ITALIANO\n"+ "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n"+ emo_eng + " ENGLISH\n"+"Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail." 
 
 url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
 
 file_xml_fermate = "lineefermate_20190301.xml"
+favourite_filename = "favourite.csv"
 
 tree = ET.parse(file_xml_fermate)
 xml_root = tree.getroot()
 
 dictUserFavourites = collections.defaultdict(list)
+dirtyBitFavouritesList = collections.defaultdict()
+
+logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
+
+def restoreFavourites():
+    if os.path.isfile(favourite_filename):
+        try:
+            with open(favourite_filename) as f:
+                csv_reader = csv.reader(f, delimiter=':')
+                for row in csv_reader:
+                    chat_id = int(row[0].replace("'"," ").strip())
+                    fav = row[1:]
+                    dictUserFavourites[chat_id] = fav
+                    
+        except Exception as e:
+            print(repr(e))
+
+    print(dictUserFavourites)
 
 
 def addLastReq(chat_id, req):
+    dirtyBitFavouritesList[chat_id] = 0
     if req not in dictUserFavourites[chat_id] and req.replace(" ", "").isdigit():
-        if len(dictUserFavourites[chat_id]) >= 6:
+        dirtyBitFavouritesList[chat_id] = 1
+        if len(dictUserFavourites[chat_id]) >= 9:
             dictUserFavourites[chat_id].pop(0)
-
         dictUserFavourites[chat_id].append(req.strip())
+    print(dictUserFavourites)
+    storeFavourites()
+
+
+def storeFavourites():
+    dirty = False
+    for key in dirtyBitFavouritesList.keys():
+        if dirtyBitFavouritesList[key] == 1:
+            dirty = True
+            break
+
+    if dirty:
+        try:
+            with open(favourite_filename, 'w') as f:
+                for key in dictUserFavourites.keys():
+
+                    f.write(str(key) + ":")
+                    f.write(":".join(dictUserFavourites[key]) + "\n")
+
+        except Exception as e:
+            print(repr(e))
+
 
 def distance(lat_user, lon_user, lat_stop, lon_stop):
     r = 6372.795477598
@@ -190,7 +237,8 @@ def getStopInfo(params):
 
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
-    #print(msg) 
+    print(msg) 
+    logging.info(msg)
     try:
         if content_type == "text":
             if (msg["text"] == "/start"):
@@ -220,24 +268,18 @@ def on_chat_message(msg):
         else:
             output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
             bot.sendMessage(chat_id, output_string)
-    except:
-
+        
+    except Exception as e:
+        print(repr(e))
         output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
         bot.sendMessage(chat_id, output_string)
 
-try:
-    MessageLoop(bot, {'chat': on_chat_message}).run_as_thread()
+
+restoreFavourites()
+
+MessageLoop(bot, {'chat': on_chat_message}).run_as_thread()
 
 
-except (exception.IdleTerminate, exception.StopListening) as e:
-    j.on_close(e)
-
-# Any other exceptions are accidents. **Print it out.**
-# This is to prevent swallowing exceptions in the case that on_close()
-# gets overridden but fails to account for unexpected exceptions.
-except Exception as e:
-    traceback.print_exc()
-    j.on_close(e)
 
 print('Listening ...')
 # Keep the program running.
