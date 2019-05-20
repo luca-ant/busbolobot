@@ -169,6 +169,7 @@ def makeReq(stop, line, time):
     body = "fermata="+stop+"&linea="+ line +"&oraHHMM="+time
     headers = { 'Content-Type': 'application/x-www-form-urlencoded'}
     response = requests.post(url=url, data=body, headers=headers)
+
     root = ET.fromstring(response.text)
   
     return parseResponse(root.text)
@@ -224,10 +225,22 @@ def on_chat_message(msg):
         output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
         bot.sendMessage(chat_id, output_string)
 
+try:
+    MessageLoop(bot, {'chat': on_chat_message}).run_as_thread()
 
-MessageLoop(bot, {'chat': on_chat_message}).run_as_thread()
+
+except (exception.IdleTerminate, exception.StopListening) as e:
+    j.on_close(e)
+
+# Any other exceptions are accidents. **Print it out.**
+# This is to prevent swallowing exceptions in the case that on_close()
+# gets overridden but fails to account for unexpected exceptions.
+except Exception as e:
+    traceback.print_exc()
+    j.on_close(e)
 
 print('Listening ...')
 # Keep the program running.
 while 1:
     time.sleep(10)
+
