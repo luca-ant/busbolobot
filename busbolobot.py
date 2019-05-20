@@ -137,8 +137,12 @@ def makeRecentKeyboard(chat_id):
     buttonLists = list()
     for i in range(0, int(len(dictUserFavourites[chat_id])/3)+1, 1):
         buttonLists.append(list())
-
-    if len(dictUserFavourites[chat_id]) > 3:
+    
+    if len(dictUserFavourites[chat_id]) > 6:
+        buttonLists[0] = dictUserFavourites[chat_id][:3]
+        buttonLists[1] = dictUserFavourites[chat_id][3:6]
+        buttonLists[2] = dictUserFavourites[chat_id][6:]
+    elif len(dictUserFavourites[chat_id]) > 3:
         buttonLists[0] = dictUserFavourites[chat_id][:3]
         buttonLists[1] = dictUserFavourites[chat_id][3:]
     else:
