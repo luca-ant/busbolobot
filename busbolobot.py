@@ -39,9 +39,10 @@ file_xml_fermate = "lineefermate_20190511.xml"
 favourite_filename = "favourite.csv"
 logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
 
-file_xml_fermate = "/bot/busbolobot/lineefermate_20190511.xml"
-favourite_filename = "/bot/busbolobot/favourite.csv"
-logging.basicConfig(filename="/bot/busbolobot/busbolobot.log", level=logging.INFO)
+#file_xml_fermate = "/bot/busbolobot/lineefermate_20190511.xml"
+#favourite_filename = "/bot/busbolobot/favourite.csv"
+#logging.basicConfig(filename="/bot/busbolobot/busbolobot.log", level=logging.INFO)
+
 
 writer_lock = Lock()
 
