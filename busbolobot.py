@@ -80,7 +80,7 @@ def addLastReq(chat_id, req):
 
 
 def storeFavourites():
-#    writer_lock.acquire()
+    writer_lock.acquire()
     dirty = False
     for key in dirtyBitFavouritesList.keys():
         if dirtyBitFavouritesList[key] == 1:
@@ -97,7 +97,7 @@ def storeFavourites():
 
         except Exception as e:
             print(repr(e))
-#    writer_lock.release()
+    writer_lock.release()
 
 
 
