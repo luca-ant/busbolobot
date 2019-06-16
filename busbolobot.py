@@ -248,6 +248,9 @@ def getStopInfo(params):
         return "error"
 
 def getStopLocation(stop):
+    if stop == "":
+        return ("LAT not found", "LON not found")
+
     for child in xml_root:
         id_fermata = child[1].text
         
@@ -308,7 +311,6 @@ def on_chat_message(msg):
 
             try:
                 string_from_audio = audio_recognizer.recognize_google(audio, language="it-IT")
-            
             except sr.UnknownValueError:
                 print("Google Speech Recognition could not understand audio")
                 string_from_audio = ""
@@ -317,15 +319,25 @@ def on_chat_message(msg):
                 print("Could not request results from Google Speech Recognition service; {0}".format(e))
             
             logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### AUDIO TEXT = " + string_from_audio)
+            try:
+                stop = string_from_audio.split()[0]
+            except:
+                stop = ""
+
+            lat_lon = getStopLocation(stop)
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### LOCATION = " + lat_lon[0] + ", " + lat_lon[1] )
 
             params = string_from_audio.split()
             output_string = getStopInfo(params)
             if output_string == "error":
-                raise Exception("audio exception")
-            addLastReq(chat_id, string_from_audio)
-            bot.sendMessage(chat_id, donation_string)
-            bot.sendMessage(chat_id, "AUDIO TEXT: \""+ string_from_audio+ "\"")
-            bot.sendMessage(chat_id, output_string, reply_markup=makeRecentKeyboard(chat_id))
+                output_string = emo_ita+ " Parla chiaro! Pronuncia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\n"+ emo_eng +" Speak clearly! Say \n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\""
+                bot.sendMessage(chat_id, output_string)
+            else:
+
+                addLastReq(chat_id, string_from_audio)
+                bot.sendMessage(chat_id, donation_string)
+                bot.sendMessage(chat_id, "AUDIO TEXT: \""+ string_from_audio+ "\"")
+                bot.sendMessage(chat_id, output_string, reply_markup=makeRecentKeyboard(chat_id))
 
 
         else:
@@ -338,6 +350,9 @@ def on_chat_message(msg):
         print(repr(e))
         output_string = emo_ita+ " Non ho capito... Invia un messaggio o la tua posizione!\n"+ emo_eng +" I don't understand... Send a message or your location"
         bot.sendMessage(chat_id, output_string)
+
+    logging.info("-"*50)
+
 
 
 restoreFavourites()
