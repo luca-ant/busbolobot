@@ -244,22 +244,38 @@ def getStopInfo(params):
     else:
         return "An error occurred"
 
+def getStopLocation(stop):
+    for child in xml_root:
+        id_fermata = child[1].text
+        
+        if id_fermata == stop:
+            lat_fermata = child[7].text
+            lon_fermata = child[8].text
+            return (lat_fermata, lon_fermata)
 
+    return (0,0)
 
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
     print(msg) 
-    logging.info(msg)
     try:
         if content_type == "text":
             if (msg["text"] == "/start"):
+                now = datetime.now()
+                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### MESSAGGIO = " + repr(msg))
                 output_string = emo_bus + " TPER HelloBus on Telegram! "+ emo_bus +"\n\n"+ help_string
                 bot.sendMessage(chat_id, output_string, reply_markup=ReplyKeyboardRemove())
             elif (msg["text"] == "/help"):
+                now = datetime.now()
+                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### MESSAGGIO = " + repr(msg))
         
                 bot.sendMessage(chat_id, donation_string)
                 bot.sendMessage(chat_id, help_string, reply_markup=makeRecentKeyboard(chat_id))
             else:
+                now = datetime.now()
+                stop = msg["text"].split()[0]
+                lat_lon = getStopLocation(stop)
+                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### LOCATION = " + lat_lon[0] + ", " + lat_lon[1]  + " ### MESSAGGIO = " + repr(msg))
                 params = msg["text"].split()
                 output_string = getStopInfo(params)
                 addLastReq(chat_id, msg["text"])
@@ -268,6 +284,8 @@ def on_chat_message(msg):
 
         
         elif content_type == "location":
+            now = datetime.now()
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### MESSAGGIO = " + repr(msg))
             lat_user = msg["location"]["latitude"]
             lon_user = msg["location"]["longitude"]
        
@@ -277,6 +295,8 @@ def on_chat_message(msg):
             bot.sendMessage(chat_id, output["output_string"], reply_markup=makeLocationKeyboard(output["stringKeyboardList"]))
 
         else:
+            now = datetime.now()
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### MESSAGGIO = " + repr(msg))
             output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
             bot.sendMessage(chat_id, output_string)
         
