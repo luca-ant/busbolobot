@@ -6,6 +6,8 @@ import math
 import time
 import logging
 import xml.etree.ElementTree as ET
+from pydub import AudioSegment
+import speech_recognition as sr
 import requests
 import telepot
 from datetime import datetime
@@ -45,13 +47,14 @@ logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
 
 
 writer_lock = Lock()
+audio_recognizer = sr.Recognizer()
 
 tree = ET.parse(file_xml_fermate)
 xml_root = tree.getroot()
 
 dictUserFavourites = collections.defaultdict(list)
 dirtyBitFavouritesList = collections.defaultdict()
-
+audio_file = "/tmp/audio_temp"
 
 def restoreFavourites():
     if os.path.isfile(favourite_filename):
@@ -242,7 +245,7 @@ def getStopInfo(params):
     elif len(params) == 1:
         return makeReq(params[0], "", "")
     else:
-        return "An error occurred"
+        return "error"
 
 def getStopLocation(stop):
     for child in xml_root:
@@ -293,15 +296,47 @@ def on_chat_message(msg):
 
             bot.sendMessage(chat_id, output["output_string"], reply_markup=makeLocationKeyboard(output["stringKeyboardList"]))
 
+        elif content_type == "voice":
+            now = datetime.now()
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### MESSAGGIO = " + repr(msg))
+            bot.download_file(msg["voice"]["file_id"], audio_file+".ogg")
+            audio_ogg = AudioSegment.from_ogg(audio_file+".ogg")
+            audio_ogg.export(audio_file+".wav", format="wav")
+
+            with sr.AudioFile(audio_file + ".wav") as source:
+                audio = audio_recognizer.record(source)  
+
+            try:
+                string_from_audio = audio_recognizer.recognize_google(audio, language="it-IT")
+            
+            except sr.UnknownValueError:
+                print("Google Speech Recognition could not understand audio")
+                string_from_audio = ""
+            except sr.RequestError as e:
+                string_from_audio = ""
+                print("Could not request results from Google Speech Recognition service; {0}".format(e))
+            
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### AUDIO TEXT = " + string_from_audio)
+
+            params = string_from_audio.split()
+            output_string = getStopInfo(params)
+            if output_string == "error":
+                raise Exception("audio exception")
+            addLastReq(chat_id, string_from_audio)
+            bot.sendMessage(chat_id, donation_string)
+            bot.sendMessage(chat_id, "AUDIO TEXT: \""+ string_from_audio+ "\"")
+            bot.sendMessage(chat_id, output_string, reply_markup=makeRecentKeyboard(chat_id))
+
+
         else:
             now = datetime.now()
             logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### MESSAGGIO = " + repr(msg))
-            output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
+            output_string = emo_ita+ " Non ho capito... Invia un messaggio o la tua posizione!\n"+ emo_eng +" I don't understand... Send a message or your location"
             bot.sendMessage(chat_id, output_string)
         
     except Exception as e:
         print(repr(e))
-        output_string = emo_ita+ " Non ho capito... Invia un messaggio di testo o la tua posizione!\n"+ emo_eng +" I don't understand...  Send a text message or your location"
+        output_string = emo_ita+ " Non ho capito... Invia un messaggio o la tua posizione!\n"+ emo_eng +" I don't understand... Send a message or your location"
         bot.sendMessage(chat_id, output_string)
 
 
