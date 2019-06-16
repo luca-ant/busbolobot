@@ -252,8 +252,7 @@ def getStopLocation(stop):
             lat_fermata = child[7].text
             lon_fermata = child[8].text
             return (lat_fermata, lon_fermata)
-
-    return (0,0)
+    return ("LAT not found", "LON not found")
 
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
