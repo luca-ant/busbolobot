@@ -9,12 +9,94 @@ import xml.etree.ElementTree as ET
 from pydub import AudioSegment
 import speech_recognition as sr
 import requests
+import threading
 import telepot
 from datetime import datetime
 from collections import defaultdict
 from telepot.loop import MessageLoop
-from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from threading import Lock
+from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from threading import Lock, Thread
+
+
+def makeInlineTrackKeyboard(params):
+    try:
+        stop = params[0]
+    except:
+        stop = ""
+    try:
+        line = params[1]
+    except:
+        line=""
+
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [dict(text='TRACK', callback_data="track "+ stop + " " + line)
+            ]])        
+    return keyboard
+
+
+
+
+class TrackThread(Thread):
+    def __init__(self, bot, msg, stop, line, first_msg ):
+ 
+        Thread.__init__(self)
+        query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
+        self.chat_id = from_id 
+        self.msg_id = msg['message']['message_id']     
+        self.stop = stop
+        self.line = line
+        self.stop_flag = False
+        self.count = 10
+        self.bot = bot
+        self.last_message = first_msg
+        self.keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [dict(text='STOP', callback_data="stop "+ stop + " " + line)]
+        ])
+
+    def run(self):
+        while(self.count > 0):
+            try:
+                self.count = self.count - 1
+                time.sleep(60)
+                if self.stop_flag:
+                    break
+                output_string = getStopInfo((self.stop,self.line))
+                self.last_message = output_string
+                self.bot.deleteMessage((self.chat_id,self.msg_id))
+                new_msg = self.bot.sendMessage(self.chat_id, output_string, reply_markup=self.keyboard)
+                self.msg_id = new_msg["message_id"]
+
+#                self.bot.editMessageText(self.msg_edited, output_string, reply_markup=self.keyboard)
+
+            except Exception as e:
+                print(repr(e))
+
+        if self.stop_flag:  
+            try:
+                now = datetime.now()
+                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### CHAT_ID = "+ str(self.chat_id) +  " ### TRACKING STOP for " + self.stop + " " + self.line)
+                logging.info("-"*50)
+                print(str(self.chat_id) + " stop " + str(self.stop) + " " + str(self.line))
+                #self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING STOPPED!" , reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
+                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message , reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
+            except Exception as e:
+                print(repr(e))
+        else:
+        #    self.bot.sendMessage(self.chat_id, "TRACKING ENDED!")
+            now = datetime.now()
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### CHAT_ID = "+ str(self.chat_id) +  " ### TRACKING END for " + self.stop + " " + self.line)
+            logging.info("-"*50)
+            try:
+                print(str(self.chat_id) + " end " + str(self.stop) + " " + str(self.line))
+                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING ENDED!" , reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
+                #self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
+            except Exception as e:
+                print(repr(e))
+
+
+    def set_stop_flag(self, b):
+        self.stop_flag = b
 
 
 with open(sys.argv[1]) as f:
@@ -52,8 +134,9 @@ audio_recognizer = sr.Recognizer()
 tree = ET.parse(file_xml_fermate)
 xml_root = tree.getroot()
 
-dictUserFavourites = collections.defaultdict(list)
-dirtyBitFavouritesList = collections.defaultdict()
+dict_user_favourites = collections.defaultdict(list)
+dirty_bit_favourites_list = collections.defaultdict()
+track_threads = collections.defaultdict()
 audio_file = "/tmp/audio_temp"
 
 def restoreFavourites():
@@ -64,37 +147,37 @@ def restoreFavourites():
                 for row in csv_reader:
                     chat_id = int(row[0].replace("'"," ").strip())
                     fav = row[1:]
-                    dictUserFavourites[chat_id] = fav
+                    dict_user_favourites[chat_id] = fav
                     
         except Exception as e:
             print(repr(e))
 
 
 def addLastReq(chat_id, req):
-    dirtyBitFavouritesList[chat_id] = 0
-    if req not in dictUserFavourites[chat_id] and req.replace(" ", "").isdigit():
-        dirtyBitFavouritesList[chat_id] = 1
-        if len(dictUserFavourites[chat_id]) >= 9:
-            dictUserFavourites[chat_id].pop(0)
-        dictUserFavourites[chat_id].append(req.strip())
+    dirty_bit_favourites_list[chat_id] = 0
+    if req not in dict_user_favourites[chat_id] and req.replace(" ", "").isdigit():
+        dirty_bit_favourites_list[chat_id] = 1
+        if len(dict_user_favourites[chat_id]) >= 9:
+            dict_user_favourites[chat_id].pop(0)
+        dict_user_favourites[chat_id].append(req.strip())
     storeFavourites()
 
 
 def storeFavourites():
     writer_lock.acquire()
     dirty = False
-    for key in dirtyBitFavouritesList.keys():
-        if dirtyBitFavouritesList[key] == 1:
+    for key in dirty_bit_favourites_list.keys():
+        if dirty_bit_favourites_list[key] == 1:
             dirty = True
             break
 
     if dirty:
         try:
             with open(favourite_filename, 'w') as f:
-                for key in dictUserFavourites.keys():
+                for key in dict_user_favourites.keys():
 
                     f.write(str(key) + ":")
-                    f.write(":".join(dictUserFavourites[key]) + "\n")
+                    f.write(":".join(dict_user_favourites[key]) + "\n")
 
         except Exception as e:
             print(repr(e))
@@ -138,28 +221,38 @@ def makeLocationKeyboard(stringKeyboardList):
 def makeRecentKeyboard(chat_id):
 
     buttonLists = list()
-    for i in range(0, int(len(dictUserFavourites[chat_id])/3)+1, 1):
+    for i in range(0, int(len(dict_user_favourites[chat_id])/3)+1, 1):
         buttonLists.append(list())
     
-    if len(dictUserFavourites[chat_id]) > 6:
-        buttonLists[0] = dictUserFavourites[chat_id][:3]
-        buttonLists[1] = dictUserFavourites[chat_id][3:6]
-        buttonLists[2] = dictUserFavourites[chat_id][6:]
-    elif len(dictUserFavourites[chat_id]) > 3:
-        buttonLists[0] = dictUserFavourites[chat_id][:3]
-        buttonLists[1] = dictUserFavourites[chat_id][3:]
+    if len(dict_user_favourites[chat_id]) > 6:
+        buttonLists[0] = dict_user_favourites[chat_id][:3]
+        buttonLists[1] = dict_user_favourites[chat_id][3:6]
+        buttonLists[2] = dict_user_favourites[chat_id][6:]
+    elif len(dict_user_favourites[chat_id]) > 3:
+        buttonLists[0] = dict_user_favourites[chat_id][:3]
+        buttonLists[1] = dict_user_favourites[chat_id][3:]
     else:
-        buttonLists[0] = dictUserFavourites[chat_id]
+        buttonLists[0] = dict_user_favourites[chat_id]
     keyboard = ReplyKeyboardMarkup(keyboard=buttonLists,resize_keyboard=True)
     return keyboard 
 
-def parseResponse(text):
+def parseResponse(stop, line, text):
     try:
         nextArr = text.split(sep=",")
         first = nextArr[0][14:].strip()
         firstInfo = first.split() 
         result = list()
-        result.append("TperHellobus:\n") 
+        result.append(emo_ita + " Fermata: "+ stop)
+        if(line != ""):
+            result.append(" Linea: "+ line + "\n") 
+        else:
+            result.append("\n")
+        result.append(emo_eng + " Stop: "+ stop ) 
+        if(line != ""):
+            result.append(" Line: "+ line + "\n") 
+        else:
+            result.append("\n")
+        result.append("\n")
         result.append(emo_bus+ " ["+firstInfo[0]+"] " )
         
         if firstInfo[1] == "DaSatellite":
@@ -233,11 +326,10 @@ def makeReq(stop, line, time):
 
     root = ET.fromstring(response.text)
   
-    return parseResponse(root.text)
+    return parseResponse(stop, line, root.text)
 
 
 def getStopInfo(params):
-   
     if len(params) >= 3:
         return makeReq(params[0], params[1], params[2])
     elif len(params) == 2:
@@ -259,6 +351,80 @@ def getStopLocation(stop):
             lon_fermata = child[8].text
             return (lat_fermata, lon_fermata)
     return ("LAT not found", "LON not found")
+
+
+
+
+def on_callback_query(msg):
+    try:
+        query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
+        msg_edited = (from_id, msg['message']['message_id'])
+        print(from_id , query_data)
+        if (query_data.startswith("track")):
+            try:
+                stop = query_data.split()[1]
+            except:
+                stop = ""
+            try:
+                line = query_data.split()[2]
+            except:
+                line = ""
+            
+            output_string = getStopInfo((stop, line))
+
+            now = datetime.now() 
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### CHAT_ID = "+ str(from_id) +" ### TRACKING START for " + stop + " " + line)
+            logging.info("-"*50)
+        
+            thread = TrackThread(bot, msg, stop, line, output_string) 
+            
+            try:
+                track_threads[from_id].set_stop_flag(True)
+            except:
+                pass
+            track_threads[from_id] = thread 
+            thread.start()
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [dict(text='STOP', callback_data="stop "+ stop + " " + line)]
+            ])
+            try:
+        #        bot.sendMessage(from_id, "TRACKING STARTED!")
+                bot.editMessageText(msg_edited, output_string , reply_markup=keyboard)
+            except Exception as e:
+                print(repr(e))
+
+            bot.answerCallbackQuery(query_id,text="TRACKING STARTED!")
+
+        if (query_data.startswith("stop")):
+            
+            try:
+                stop = query_data.split()[1]
+            except:
+                stop = ""
+            try:
+                line = query_data.split()[2]
+            except:
+                line = ""
+           
+
+            try:
+                track_threads[from_id].set_stop_flag(True)
+            except:
+                pass 
+            
+            bot.answerCallbackQuery(query_id,text="TRACKING STOPPED!")
+        #    bot.sendMessage(from_id, "TRACKING STOPPED!")
+            output_string = msg["message"]["text"]  
+            #bot.editMessageText(msg_edited, output_string + "\n\nTRACKING STOPPED! ", reply_markup=makeInlineTrackKeyboard((stop,line)))
+            bot.editMessageText(msg_edited, output_string , reply_markup=makeInlineTrackKeyboard((stop,line)))
+
+    except Exception as e:
+        print(repr(e))
+
+
+
+
 
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
@@ -284,8 +450,11 @@ def on_chat_message(msg):
                 params = msg["text"].split()
                 output_string = getStopInfo(params)
                 addLastReq(chat_id, msg["text"])
-                bot.sendMessage(chat_id, donation_string)
-                bot.sendMessage(chat_id, output_string, reply_markup=makeRecentKeyboard(chat_id))
+                bot.sendMessage(chat_id, donation_string, reply_markup=makeRecentKeyboard(chat_id))
+                if output_string.startswith("HellobusHelp"):
+                    bot.sendMessage(chat_id, output_string)
+                else:
+                    bot.sendMessage(chat_id, output_string, reply_markup=makeInlineTrackKeyboard(params))
 
         
         elif content_type == "location":
@@ -335,9 +504,12 @@ def on_chat_message(msg):
             else:
 
                 addLastReq(chat_id, string_from_audio)
-                bot.sendMessage(chat_id, donation_string)
+                bot.sendMessage(chat_id, donation_string, reply_markup=makeRecentKeyboard(chat_id))
                 bot.sendMessage(chat_id, "AUDIO TEXT: \""+ string_from_audio+ "\"")
-                bot.sendMessage(chat_id, output_string, reply_markup=makeRecentKeyboard(chat_id))
+                if output_string.startswith("HellobusHelp"):
+                    bot.sendMessage(chat_id, output_string)
+                else:
+                    bot.sendMessage(chat_id, output_string, reply_markup=makeInlineTrackKeyboard(params))
 
 
         else:
@@ -356,8 +528,7 @@ def on_chat_message(msg):
 
 
 restoreFavourites()
-
-MessageLoop(bot, {'chat': on_chat_message}).run_as_thread()
+MessageLoop(bot, {'chat': on_chat_message, 'callback_query': on_callback_query}).run_as_thread()
 
 
 
