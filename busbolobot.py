@@ -27,18 +27,18 @@ def makeInlineTrackKeyboard(params):
         line = params[1]
     except:
         line=""
-
-
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [dict(text='TRACK', callback_data="track "+ stop + " " + line)
-            ]])        
+        [InlineKeyboardButton(text='TRACK 5 min', callback_data="track "+ stop + " " + line + " 5")],
+        [InlineKeyboardButton(text='TRACK 10 min', callback_data="track "+ stop + " " + line + " 10")],
+        [InlineKeyboardButton(text='TRACK 15 min', callback_data="track "+ stop + " " + line + " 15")],
+            ])        
     return keyboard
 
 
 
 
 class TrackThread(Thread):
-    def __init__(self, bot, msg, stop, line, first_msg ):
+    def __init__(self, time_track, bot, msg, stop, line, first_msg ):
  
         Thread.__init__(self)
         query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
@@ -47,7 +47,7 @@ class TrackThread(Thread):
         self.stop = stop
         self.line = line
         self.stop_flag = False
-        self.count = 10
+        self.count = time_track
         self.bot = bot
         self.last_message = first_msg
         self.keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -93,7 +93,6 @@ class TrackThread(Thread):
                 #self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
             except Exception as e:
                 print(repr(e))
-
 
     def set_stop_flag(self, b):
         self.stop_flag = b
@@ -361,22 +360,26 @@ def on_callback_query(msg):
         msg_edited = (from_id, msg['message']['message_id'])
         print(from_id , query_data)
         if (query_data.startswith("track")):
-            try:
-                stop = query_data.split()[1]
-            except:
+            array = query_data.split()
+            if len(array) == 3:
+                stop = array[1]
+                line=""
+                t = int(array[2])
+            elif len(array) == 4:
+                stop = array[1]
+                line = array[2]
+                t = int(array[3])
+            else:
                 stop = ""
-            try:
-                line = query_data.split()[2]
-            except:
                 line = ""
-            
+                t = 0
             output_string = getStopInfo((stop, line))
 
             now = datetime.now() 
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### CHAT_ID = "+ str(from_id) +" ### TRACKING START for " + stop + " " + line)
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +" ### CHAT_ID = "+ str(from_id) +" ### TRACKING START " + stop + " " + line + " for "+ str(t) + " min")
             logging.info("-"*50)
         
-            thread = TrackThread(bot, msg, stop, line, output_string) 
+            thread = TrackThread(t, bot, msg, stop, line, output_string) 
             
             try:
                 track_threads[from_id].set_stop_flag(True)
@@ -397,16 +400,18 @@ def on_callback_query(msg):
             bot.answerCallbackQuery(query_id,text="TRACKING STARTED!")
 
         if (query_data.startswith("stop")):
-            
-            try:
-                stop = query_data.split()[1]
-            except:
+            array = query_data.split()
+            if len(array) == 2:
+                stop = array[1]
+                line = "" 
+            elif len(array) == 3:
+                stop = array[1]
+                line = array[2]
+            else:
                 stop = ""
-            try:
-                line = query_data.split()[2]
-            except:
                 line = ""
-           
+                t = 0
+            
 
             try:
                 track_threads[from_id].set_stop_flag(True)
