@@ -266,7 +266,6 @@ def parseResponse(stop, line, text):
             result.append(" Line: "+ line + "\n") 
         else:
             result.append("\n")
-        result.append("\n")
         result.append(emo_bus+ " ["+firstInfo[0]+"] " )
         
         if firstInfo[1] == "DaSatellite":
