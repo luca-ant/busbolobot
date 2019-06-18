@@ -17,6 +17,62 @@ from telepot.loop import MessageLoop
 from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from threading import Lock, Thread
 
+with open(sys.argv[1]) as f:
+    token = f.read().strip()
+f.close()
+
+bot = telepot.Bot(token)
+
+emo_clock = u'\U0001F552'
+emo_sat = u'\U0001F6F0'
+emo_ita = u'\U0001F1EE'u'\U0001F1F9'
+emo_eng = u'\U0001F1EC'u'\U0001F1E7'
+emo_bus = u'\U0001F68C'
+emo_money = u'\U0001F4B5'
+emo_track = u'\U0001F501'
+emo_stop = u'\U0000274C'
+
+
+donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n"+emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
+
+help_string = emo_ita + " ITALIANO\n"+ "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n"+ emo_eng + " ENGLISH\n"+"Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail." 
+
+url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
+
+file_xml_fermate = "lineefermate_20190511.xml"
+favourite_filename = "favourite.csv"
+logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
+
+#file_xml_fermate = "/bot/busbolobot/lineefermate_20190511.xml"
+#favourite_filename = "/bot/busbolobot/favourite.csv"
+#logging.basicConfig(filename="/bot/busbolobot/busbolobot.log", level=logging.INFO)
+
+
+writer_lock = Lock()
+audio_recognizer = sr.Recognizer()
+
+tree = ET.parse(file_xml_fermate)
+xml_root = tree.getroot()
+
+dict_user_favourites = collections.defaultdict(list)
+dirty_bit_favourites_list = collections.defaultdict()
+track_threads = collections.defaultdict()
+audio_file = "/tmp/audio_temp"
+
+
+def makeInlineStopKeyboard(params):
+    try:
+        stop = params[0]
+    except:
+        stop = ""
+    try:
+        line = params[1]
+    except:
+        line=""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=emo_stop + ' STOP!', callback_data="stop "+ stop + " " + line)]
+            ])        
+    return keyboard
 
 def makeInlineTrackKeyboard(params):
     try:
@@ -28,9 +84,9 @@ def makeInlineTrackKeyboard(params):
     except:
         line=""
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='TRACK 5 min', callback_data="track "+ stop + " " + line + " 5")],
-        [InlineKeyboardButton(text='TRACK 10 min', callback_data="track "+ stop + " " + line + " 10")],
-        [InlineKeyboardButton(text='TRACK 15 min', callback_data="track "+ stop + " " + line + " 15")],
+        [InlineKeyboardButton(text=emo_track + ' TRACK 5 min', callback_data="track "+ stop + " " + line + " 5")],
+        [InlineKeyboardButton(text=emo_track + ' TRACK 10 min', callback_data="track "+ stop + " " + line + " 10")],
+        [InlineKeyboardButton(text=emo_track + ' TRACK 15 min', callback_data="track "+ stop + " " + line + " 15")],
             ])        
     return keyboard
 
@@ -50,9 +106,7 @@ class TrackThread(Thread):
         self.count = time_track
         self.bot = bot
         self.last_message = first_msg
-        self.keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [dict(text='STOP', callback_data="stop "+ stop + " " + line)]
-        ])
+        self.keyboard = makeInlineStopKeyboard((stop, line))
 
     def run(self):
         while(self.count > 0):
@@ -98,45 +152,6 @@ class TrackThread(Thread):
         self.stop_flag = b
 
 
-with open(sys.argv[1]) as f:
-    token = f.read().strip()
-f.close()
-
-bot = telepot.Bot(token)
-
-emo_clock = u'\U0001F552'
-emo_sat = u'\U0001F6F0'
-emo_ita = u'\U0001F1EE'u'\U0001F1F9'
-emo_eng = u'\U0001F1EC'u'\U0001F1E7'
-emo_bus = u'\U0001F68C'
-emo_money = u'\U0001F4B5'
-
-
-donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n"+emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
-
-help_string = emo_ita + " ITALIANO\n"+ "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n"+ emo_eng + " ENGLISH\n"+"Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail." 
-
-url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
-
-file_xml_fermate = "lineefermate_20190511.xml"
-favourite_filename = "favourite.csv"
-logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
-
-#file_xml_fermate = "/bot/busbolobot/lineefermate_20190511.xml"
-#favourite_filename = "/bot/busbolobot/favourite.csv"
-#logging.basicConfig(filename="/bot/busbolobot/busbolobot.log", level=logging.INFO)
-
-
-writer_lock = Lock()
-audio_recognizer = sr.Recognizer()
-
-tree = ET.parse(file_xml_fermate)
-xml_root = tree.getroot()
-
-dict_user_favourites = collections.defaultdict(list)
-dirty_bit_favourites_list = collections.defaultdict()
-track_threads = collections.defaultdict()
-audio_file = "/tmp/audio_temp"
 
 def restoreFavourites():
     if os.path.isfile(favourite_filename):
@@ -388,12 +403,9 @@ def on_callback_query(msg):
             track_threads[from_id] = thread 
             thread.start()
             
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                    [dict(text='STOP', callback_data="stop "+ stop + " " + line)]
-            ])
             try:
         #        bot.sendMessage(from_id, "TRACKING STARTED!")
-                bot.editMessageText(msg_edited, output_string , reply_markup=keyboard)
+                bot.editMessageText(msg_edited, output_string , reply_markup=makeInlineStopKeyboard((stop,line)))
             except Exception as e:
                 print(repr(e))
 
