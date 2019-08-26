@@ -256,16 +256,6 @@ def parseResponse(stop, line, text):
         first = nextArr[0][14:].strip()
         firstInfo = first.split() 
         result = list()
-        result.append(emo_ita + " Fermata: "+ stop)
-        if(line != ""):
-            result.append(" Linea: "+ line + "\n") 
-        else:
-            result.append("\n")
-        result.append(emo_eng + " Stop: "+ stop ) 
-        if(line != ""):
-            result.append(" Line: "+ line + "\n") 
-        else:
-            result.append("\n")
         result.append(emo_bus+ " ["+firstInfo[0]+"] " )
         
         if firstInfo[1] == "DaSatellite":
@@ -290,6 +280,18 @@ def parseResponse(stop, line, text):
             
             tdiff = datetime.strptime(secondInfo[2],'%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
             result.append("tra " + repr(int(tdiff.seconds/60)) + " minuto/i ("+ secondInfo[2] +")")
+
+        result.append("\n")
+        result.append(emo_ita + " Fermata: "+ stop)
+        if(line != ""):
+            result.append(" Linea: "+ line + "\n") 
+        else:
+            result.append("\n")
+        result.append(emo_eng + " Stop: "+ stop ) 
+        if(line != ""):
+            result.append(" Line: "+ line + "\n") 
+        else:
+            result.append("\n")
 
         return "".join(result)
     except:
