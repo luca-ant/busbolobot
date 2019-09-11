@@ -142,7 +142,7 @@ class TrackThread(Thread):
                 print(str(self.chat_id) + " stop " +
                       str(self.stop) + " " + str(self.line))
                 # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING STOPPED!" , reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
-                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message,
+                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message,parse_mode='HTML',
                                          reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
             except Exception as e:
                 print(repr(e))
@@ -155,7 +155,7 @@ class TrackThread(Thread):
             try:
                 print(str(self.chat_id) + " end " +
                       str(self.stop) + " " + str(self.line))
-                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING ENDED!",
+                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING ENDED!",parse_mode='HTML',
                                          reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
                 # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
             except Exception as e:
