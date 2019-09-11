@@ -128,7 +128,7 @@ class TrackThread(Thread):
                     self.chat_id, output_string, parse_mode='HTML', reply_markup=self.keyboard)
                 self.msg_id = new_msg["message_id"]
 
-            #                self.bot.editMessageText(self.msg_edited, output_string, reply_markup=self.keyboard)
+            #                self.bot.editMessageText(self.msg_edited, output_string,parse_mode='HTML', reply_markup=self.keyboard)
 
             except Exception as e:
                 print(repr(e))
@@ -141,7 +141,7 @@ class TrackThread(Thread):
                 logging.info("-" * 50)
                 print(str(self.chat_id) + " stop " +
                       str(self.stop) + " " + str(self.line))
-                # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING STOPPED!" , reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
+                # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING STOPPED!" ,parse_mode='HTML', reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
                 self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message,parse_mode='HTML',
                                          reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
             except Exception as e:
@@ -157,7 +157,7 @@ class TrackThread(Thread):
                       str(self.stop) + " " + str(self.line))
                 self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING ENDED!",parse_mode='HTML',
                                          reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
-                # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
+                # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message,parse_mode='HTML',reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
             except Exception as e:
                 print(repr(e))
 
@@ -429,7 +429,7 @@ def on_callback_query(msg):
             try:
                 #        bot.sendMessage(from_id,  parse_mode='HTML',"TRACKING STARTED!")
                 bot.editMessageText(
-                    msg_edited, output_string, reply_markup=makeInlineStopKeyboard((stop, line)))
+                    msg_edited, output_string,parse_mode='HTML', reply_markup=makeInlineStopKeyboard((stop, line)))
             except Exception as e:
                 print(repr(e))
 
@@ -456,8 +456,8 @@ def on_callback_query(msg):
             bot.answerCallbackQuery(query_id, text="TRACKING STOPPED!")
             #    bot.sendMessage(from_id,  parse_mode='HTML',"TRACKING STOPPED!")
             output_string = msg["message"]["text"]
-            # bot.editMessageText(msg_edited, output_string + "\n\nTRACKING STOPPED! ", reply_markup=makeInlineTrackKeyboard((stop,line)))
-            bot.editMessageText(msg_edited, output_string,
+            # bot.editMessageText(msg_edited, output_string + "\n\nTRACKING STOPPED! ",parse_mode='HTML', reply_markup=makeInlineTrackKeyboard((stop,line)))
+            bot.editMessageText(msg_edited, output_string,parse_mode='HTML',
                                 reply_markup=makeInlineTrackKeyboard((stop, line)))
 
     except Exception as e:
