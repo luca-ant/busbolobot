@@ -33,9 +33,11 @@ emo_money = u'\U0001F4B5'
 emo_track = u'\U0001F501'
 emo_stop = u'\U0000274C'
 
-donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n" + emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
+donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n" + \
+    emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
 
-help_string = emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
+help_string = emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
+    emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
 
 url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
 
@@ -70,7 +72,8 @@ def makeInlineStopKeyboard(params):
     except:
         line = ""
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=emo_stop + ' STOP!', callback_data="stop " + stop + " " + line)]
+        [InlineKeyboardButton(text=emo_stop + ' STOP!',
+                              callback_data="stop " + stop + " " + line)]
     ])
     return keyboard
 
@@ -85,9 +88,12 @@ def makeInlineTrackKeyboard(params):
     except:
         line = ""
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=emo_track + ' TRACK 5 min', callback_data="track " + stop + " " + line + " 5")],
-        [InlineKeyboardButton(text=emo_track + ' TRACK 10 min', callback_data="track " + stop + " " + line + " 10")],
-        [InlineKeyboardButton(text=emo_track + ' TRACK 15 min', callback_data="track " + stop + " " + line + " 15")],
+        [InlineKeyboardButton(text=emo_track + ' TRACK 5 min',
+                              callback_data="track " + stop + " " + line + " 5")],
+        [InlineKeyboardButton(text=emo_track + ' TRACK 10 min',
+                              callback_data="track " + stop + " " + line + " 10")],
+        [InlineKeyboardButton(text=emo_track + ' TRACK 15 min',
+                              callback_data="track " + stop + " " + line + " 15")],
     ])
     return keyboard
 
@@ -96,7 +102,8 @@ class TrackThread(Thread):
     def __init__(self, time_track, bot, msg, stop, line, first_msg):
 
         Thread.__init__(self)
-        query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
+        query_id, from_id, query_data = telepot.glance(
+            msg, flavor='callback_query')
         self.chat_id = from_id
         self.msg_id = msg['message']['message_id']
         self.stop = stop
@@ -117,7 +124,8 @@ class TrackThread(Thread):
                 output_string = getStopInfo((self.stop, self.line))
                 self.last_message = output_string
                 self.bot.deleteMessage((self.chat_id, self.msg_id))
-                new_msg = self.bot.sendMessage(self.chat_id, output_string, parse_mode='HTML', reply_markup=self.keyboard)
+                new_msg = self.bot.sendMessage(
+                    self.chat_id, output_string, parse_mode='HTML', reply_markup=self.keyboard)
                 self.msg_id = new_msg["message_id"]
 
             #                self.bot.editMessageText(self.msg_edited, output_string, reply_markup=self.keyboard)
@@ -131,9 +139,11 @@ class TrackThread(Thread):
                 logging.info(
                     "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### TRACKING STOP for " + self.stop + " " + self.line)
                 logging.info("-" * 50)
-                print(str(self.chat_id) + " stop " + str(self.stop) + " " + str(self.line))
+                print(str(self.chat_id) + " stop " +
+                      str(self.stop) + " " + str(self.line))
                 # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING STOPPED!" , reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
-                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
+                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message,
+                                         reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
             except Exception as e:
                 print(repr(e))
         else:
@@ -143,7 +153,8 @@ class TrackThread(Thread):
                 "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### TRACKING END for " + self.stop + " " + self.line)
             logging.info("-" * 50)
             try:
-                print(str(self.chat_id) + " end " + str(self.stop) + " " + str(self.line))
+                print(str(self.chat_id) + " end " +
+                      str(self.stop) + " " + str(self.line))
                 self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING ENDED!",
                                          reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
                 # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
@@ -208,7 +219,8 @@ def distance(lat_user, lon_user, lat_stop, lon_stop):
 
     phi = abs(radLonA - radLonB)
 
-    p = math.acos((math.sin(radLatA) * math.sin(radLatB)) + (math.cos(radLatA) * math.cos(radLatB) * math.cos(phi)))
+    p = math.acos((math.sin(radLatA) * math.sin(radLatB)) +
+                  (math.cos(radLatA) * math.cos(radLatB) * math.cos(phi)))
 
     distance = p * r * 1000
     return distance
@@ -263,9 +275,11 @@ def parseResponse(stop, line, text):
         else:
             result.append(emo_clock + " DA ORARIO ")
 
-        tdiff = datetime.strptime(firstInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
+        tdiff = datetime.strptime(
+            firstInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
 
-        result.append("tra <b>" + repr(int(tdiff.seconds / 60)) + " minuto/i </b>(" + firstInfo[2] + ")")
+        result.append("tra <b>" + repr(int(tdiff.seconds / 60)) +
+                      " minuto/i </b>(" + firstInfo[2] + ")")
 
         if len(nextArr) > 1:
             second = nextArr[1].strip()
@@ -278,8 +292,10 @@ def parseResponse(stop, line, text):
             else:
                 result.append(emo_clock + " DA ORARIO ")
 
-            tdiff = datetime.strptime(secondInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
-            result.append("tra <b>" + repr(int(tdiff.seconds / 60)) + " minuto/i </b>(" + secondInfo[2] + ")")
+            tdiff = datetime.strptime(
+                secondInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
+            result.append("tra <b>" + repr(int(tdiff.seconds / 60)
+                                           ) + " minuto/i </b>(" + secondInfo[2] + ")")
 
         result.append("\n")
         result.append(emo_ita + " Fermata: <b>" + stop + "</b>")
@@ -304,7 +320,8 @@ def makeNearbyOutput(lat_user, lon_user):
     busLines = collections.defaultdict(list)
     output = list()
     stringKeyboardList = list()
-    output.append(emo_ita + " FERMATE VICINE\n" + emo_eng + " NEARBY STOPS\n\n")
+    output.append(emo_ita + " FERMATE VICINE\n" +
+                  emo_eng + " NEARBY STOPS\n\n")
     for child in xml_root:
         linea = child[0].text
         id_fermata = child[1].text
@@ -312,10 +329,12 @@ def makeNearbyOutput(lat_user, lon_user):
         lat_fermata = child[7].text
         lon_fermata = child[8].text
 
-        dist = distance(float(lat_user), float(lon_user), float(lat_fermata), float(lon_fermata))
+        dist = distance(float(lat_user), float(lon_user),
+                        float(lat_fermata), float(lon_fermata))
         if (dist < 25):
 
-            element = id_fermata + " - " + nome_fermata + " (" + repr(int(dist)) + " m)"
+            element = id_fermata + " - " + nome_fermata + \
+                " (" + repr(int(dist)) + " m)"
             busLines[element].append(linea)
             stringKeyboardList.append(id_fermata + " " + linea)
             if id_fermata not in stringKeyboardList:
@@ -372,7 +391,8 @@ def getStopLocation(stop):
 
 def on_callback_query(msg):
     try:
-        query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
+        query_id, from_id, query_data = telepot.glance(
+            msg, flavor='callback_query')
         msg_edited = (from_id, msg['message']['message_id'])
         print(from_id, query_data)
         if (query_data.startswith("track")):
@@ -408,7 +428,8 @@ def on_callback_query(msg):
 
             try:
                 #        bot.sendMessage(from_id,  parse_mode='HTML',"TRACKING STARTED!")
-                bot.editMessageText(msg_edited, output_string, reply_markup=makeInlineStopKeyboard((stop, line)))
+                bot.editMessageText(
+                    msg_edited, output_string, reply_markup=makeInlineStopKeyboard((stop, line)))
             except Exception as e:
                 print(repr(e))
 
@@ -436,7 +457,8 @@ def on_callback_query(msg):
             #    bot.sendMessage(from_id,  parse_mode='HTML',"TRACKING STOPPED!")
             output_string = msg["message"]["text"]
             # bot.editMessageText(msg_edited, output_string + "\n\nTRACKING STOPPED! ", reply_markup=makeInlineTrackKeyboard((stop,line)))
-            bot.editMessageText(msg_edited, output_string, reply_markup=makeInlineTrackKeyboard((stop, line)))
+            bot.editMessageText(msg_edited, output_string,
+                                reply_markup=makeInlineTrackKeyboard((stop, line)))
 
     except Exception as e:
         print(repr(e))
@@ -445,48 +467,59 @@ def on_callback_query(msg):
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
     print(msg)
+
     try:
         if content_type == "text":
             if (msg["text"] == "/start"):
                 now = datetime.now()
-                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
-                output_string = emo_bus + " TPER HelloBus on Telegram! " + emo_bus + "\n\n" + help_string
-                bot.sendMessage(chat_id, output_string, parse_mode='HTML', reply_markup=ReplyKeyboardRemove())
+                logging.info(
+                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
+                output_string = emo_bus + " TPER HelloBus on Telegram! " + \
+                    emo_bus + "\n\n" + help_string
+                bot.sendMessage(
+                    chat_id, output_string, parse_mode='HTML', reply_markup=ReplyKeyboardRemove())
             elif (msg["text"] == "/help"):
                 now = datetime.now()
-                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
+                logging.info(
+                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
 
                 bot.sendMessage(chat_id, donation_string, parse_mode='HTML')
-                bot.sendMessage(chat_id, help_string, parse_mode='HTML', reply_markup=makeRecentKeyboard(chat_id))
+                bot.sendMessage(chat_id, help_string, parse_mode='HTML',
+                                reply_markup=makeRecentKeyboard(chat_id))
             else:
                 now = datetime.now()
                 stop = msg["text"].split()[0]
                 lat_lon = getStopLocation(stop)
-                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### LOCATION = " + lat_lon[0] + ", " + lat_lon[1] + " ### MESSAGGIO = " + repr(msg))
+                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### LOCATION = " +
+                             lat_lon[0] + ", " + lat_lon[1] + " ### MESSAGGIO = " + repr(msg))
                 params = msg["text"].split()
                 output_string = getStopInfo(params)
                 addLastReq(chat_id, msg["text"])
-                bot.sendMessage(chat_id, donation_string, parse_mode='HTML', reply_markup=makeRecentKeyboard(chat_id))
+                bot.sendMessage(chat_id, donation_string, parse_mode='HTML',
+                                reply_markup=makeRecentKeyboard(chat_id))
                 if output_string.startswith("HellobusHelp"):
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML')
                 else:
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML', reply_markup=makeInlineTrackKeyboard(params))
-
+                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
+                                    reply_markup=makeInlineTrackKeyboard(params))
 
         elif content_type == "location":
             now = datetime.now()
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
+                         " ### MESSAGGIO = " + repr(msg))
             lat_user = msg["location"]["latitude"]
             lon_user = msg["location"]["longitude"]
 
             output = makeNearbyOutput(lat_user, lon_user)
             bot.sendMessage(chat_id, donation_string, parse_mode='HTML')
 
-            bot.sendMessage(chat_id, output["output_string"], parse_mode='HTML', reply_markup=makeLocationKeyboard(output["stringKeyboardList"]))
+            bot.sendMessage(chat_id, output["output_string"], parse_mode='HTML',
+                            reply_markup=makeLocationKeyboard(output["stringKeyboardList"]))
 
         elif content_type == "voice":
             now = datetime.now()
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
+                         " ### MESSAGGIO = " + repr(msg))
             bot.download_file(msg["voice"]["file_id"], audio_file + ".ogg")
             audio_ogg = AudioSegment.from_ogg(audio_file + ".ogg")
             audio_ogg.export(audio_file + ".wav", format="wav")
@@ -495,55 +528,66 @@ def on_chat_message(msg):
                 audio = audio_recognizer.record(source)
 
             try:
-                string_from_audio = audio_recognizer.recognize_google(audio, language="it-IT")
+                string_from_audio = audio_recognizer.recognize_google(
+                    audio, language="it-IT")
             except sr.UnknownValueError:
                 print("Google Speech Recognition could not understand audio")
                 string_from_audio = ""
             except sr.RequestError as e:
                 string_from_audio = ""
-                print("Could not request results from Google Speech Recognition service; {0}".format(e))
+                print(
+                    "Could not request results from Google Speech Recognition service; {0}".format(e))
 
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### AUDIO TEXT = " + string_from_audio)
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
+                         " ### AUDIO TEXT = " + string_from_audio)
             try:
                 stop = string_from_audio.split()[0]
             except:
                 stop = ""
 
             lat_lon = getStopLocation(stop)
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### LOCATION = " + lat_lon[0] + ", " + lat_lon[1])
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
+                         " ### LOCATION = " + lat_lon[0] + ", " + lat_lon[1])
 
             params = string_from_audio.split()
             output_string = getStopInfo(params)
             if output_string == "error":
-                output_string = emo_ita + " Parla chiaro! Pronuncia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\n" + emo_eng + " Speak clearly! Say \n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\""
+                output_string = emo_ita + " Parla chiaro! Pronuncia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\n" + \
+                    emo_eng + " Speak clearly! Say \n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\""
                 bot.sendMessage(chat_id, output_string, parse_mode='HTML')
             else:
 
                 addLastReq(chat_id, string_from_audio)
-                bot.sendMessage(chat_id, donation_string, parse_mode='HTML', reply_markup=makeRecentKeyboard(chat_id))
-                bot.sendMessage(chat_id, "AUDIO TEXT: \"" + string_from_audio + "\"", parse_mode='HTML')
+                bot.sendMessage(chat_id, donation_string, parse_mode='HTML',
+                                reply_markup=makeRecentKeyboard(chat_id))
+                bot.sendMessage(chat_id, "AUDIO TEXT: \"" +
+                                string_from_audio + "\"", parse_mode='HTML')
                 if output_string.startswith("HellobusHelp"):
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML')
                 else:
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML', reply_markup=makeInlineTrackKeyboard(params))
-
+                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
+                                    reply_markup=makeInlineTrackKeyboard(params))
 
         else:
             now = datetime.now()
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
-            output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + emo_eng + " I don't understand... Send a message or your location"
+            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
+                         " ### MESSAGGIO = " + repr(msg))
+            output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
+                emo_eng + " I don't understand... Send a message or your location"
             bot.sendMessage(chat_id, output_string, parse_mode='HTML')
 
     except Exception as e:
         print(repr(e))
-        output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + emo_eng + " I don't understand... Send a message or your location"
+        output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
+            emo_eng + " I don't understand... Send a message or your location"
         bot.sendMessage(chat_id, output_string, parse_mode='HTML')
 
     logging.info("-" * 50)
 
 
 restoreFavourites()
-MessageLoop(bot, {'chat': on_chat_message, 'callback_query': on_callback_query}).run_as_thread()
+MessageLoop(bot, {'chat': on_chat_message,
+                  'callback_query': on_callback_query}).run_as_thread()
 
 print('Listening ...')
 # Keep the program running.
