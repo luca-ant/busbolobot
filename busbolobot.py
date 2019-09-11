@@ -500,6 +500,7 @@ def on_chat_message(msg):
                 if output_string.startswith("HellobusHelp"):
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML')
                 else:
+                    
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
                                     reply_markup=makeInlineTrackKeyboard(params))
 
