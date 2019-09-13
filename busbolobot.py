@@ -38,6 +38,7 @@ donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare 
 
 help_string = emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
     emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
+privacy_string = "<b>In order to provide you the service, this bot collects user data like yours recent stops and lines. When you send a location, it is also logged.\nUsing this bot you allow your data to be saved.</b>"
 
 url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
 
@@ -246,7 +247,7 @@ def makeLocationKeyboard(stringKeyboardList):
 
 def makeRecentKeyboard(chat_id):
     buttonLists = list()
-    for i in range(0, int(len(dict_user_favourites[chat_id]) / 3) + 1, 1):
+    for i in range(4):
         buttonLists.append(list())
 
     if len(dict_user_favourites[chat_id]) > 6:
@@ -258,6 +259,7 @@ def makeRecentKeyboard(chat_id):
         buttonLists[1] = dict_user_favourites[chat_id][3:]
     else:
         buttonLists[0] = dict_user_favourites[chat_id]
+    buttonLists[3].append("PRIVACY POLICY")
     keyboard = ReplyKeyboardMarkup(keyboard=buttonLists, resize_keyboard=True)
     return keyboard
 
@@ -486,6 +488,10 @@ def on_chat_message(msg):
                 bot.sendMessage(chat_id, donation_string, parse_mode='HTML')
                 bot.sendMessage(chat_id, help_string, parse_mode='HTML',
                                 reply_markup=makeRecentKeyboard(chat_id))
+            elif (msg["text"] == "PRIVACY POLICY"):
+
+                bot.sendMessage(chat_id, privacy_string, parse_mode='HTML')
+
             else:
                 now = datetime.now()
                 stop = msg["text"].split()[0]
