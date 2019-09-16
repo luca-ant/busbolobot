@@ -173,7 +173,7 @@ def restoreFavourites():
                 csv_reader = csv.reader(f, delimiter=':')
                 for row in csv_reader:
                     chat_id = int(row[0].replace("'", " ").strip())
-                    fav = row[1:]
+                    fav = row[1:9]
                     dict_user_favourites[chat_id] = fav
 
         except Exception as e:
@@ -228,19 +228,18 @@ def distance(lat_user, lon_user, lat_stop, lon_stop):
 
 
 def getStopName(stop):
-    
+
     for child in xml_root:
         id_fermata = child[1].text
 
         if id_fermata == stop:
             name = child[2].text
             break
-     else:
+    else:
         name = ""
-        
-     return name[:10]   
-    
-    
+
+    return name
+
 
 def makeLocationKeyboard(stringKeyboardList):
     buttonLists = list()
@@ -261,22 +260,22 @@ def makeLocationKeyboard(stringKeyboardList):
 
 
 def makeRecentKeyboard(chat_id):
-    
-    
+
     row = 5
     cols = 2
-    
+
     buttonLists = list()
     for i in range(row):
-        buttonLists.append(list())    
-    
-    col = 0
-    for i in len(dict_user_favourites[chat_id]):
+        buttonLists.append(list())
+
+    index = 0
+    for i in range(len(dict_user_favourites[chat_id])):
         name = getStopName(dict_user_favourites[chat_id][i].split()[0])
-        buttonLists[col].append(dict_user_favourites[chat_id][i] + " - " + name)
-        if col % cols == 1:
-            col += 1
-    
+        buttonLists[index].append(
+            dict_user_favourites[chat_id][i] + " - " + name)
+        if i % cols != 0:
+            index += 1
+
 
 #    buttonLists = list()
 #    for i in range(4):
@@ -292,14 +291,15 @@ def makeRecentKeyboard(chat_id):
 #    else:
 #        buttonLists[0] = dict_user_favourites[chat_id]
 
-    buttonLists[3].append("HELP")
-    buttonLists[3].append("PRIVACY POLICY")
+    buttonLists[4].append("HELP")
+    buttonLists[4].append("PRIVACY POLICY")
     keyboard = ReplyKeyboardMarkup(keyboard=buttonLists, resize_keyboard=True)
     return keyboard
 
 
 def parseResponse(stop, line, text):
     try:
+        name = getStopName(stop)
         nextArr = text.split(sep=",")
         first = nextArr[0][14:].strip()
         firstInfo = first.split()
@@ -334,16 +334,18 @@ def parseResponse(stop, line, text):
                                            ) + " minuto/i </b>(" + secondInfo[2] + ")")
 
         result.append("\n")
-        result.append(emo_ita + " Fermata: <b>" + stop + "</b>")
+        result.append(emo_ita)
         if (line != ""):
-            result.append(" Linea: <b>" + line + "</b> \n")
-        else:
-            result.append("\n")
-        result.append(emo_eng + " Stop: <b>" + stop + "</b>")
+            result.append(" Linea: <b>" + line + "</b>")
+
+        result.append(" Fermata: <b>" + stop +
+                      "</b> " + "<i>("+name+")</i>\n")
+        result.append(emo_eng)
         if (line != ""):
-            result.append(" Line: <b>" + line + "</b> \n")
-        else:
-            result.append("\n")
+            result.append(" Line: <b>" + line + "</b>")
+
+        result.append(" Stop: <b>" + stop +
+                      "</b> " + "<i>("+name+")</i>\n")
 
         return "".join(result)
     except:
@@ -538,10 +540,14 @@ def on_chat_message(msg):
             else:
                 now = datetime.now()
                 if "-" in msg["text"]:
-                    mess = msg["text"].split("-").strip()
+                    mess = msg["text"].split("-")
+                    mess = ''.join(mess[0].strip())
+
                 else:
                     mess = msg["text"]
+
                 stop = mess.split()[0]
+
                 lat_lon = getStopLocation(stop)
                 logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### LOCATION = " +
                              lat_lon[0] + ", " + lat_lon[1] + " ### MESSAGGIO = " + repr(msg))
@@ -634,7 +640,7 @@ def on_chat_message(msg):
                             reply_markup=makeRecentKeyboard(chat_id))
 
     except Exception as e:
-        print(repr(e))
+        traceback.print_exc()
         output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
             emo_eng + " I don't understand... Send a message or your location"
         bot.sendMessage(chat_id, output_string, parse_mode='HTML',
