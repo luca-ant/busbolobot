@@ -36,8 +36,8 @@ emo_stop = u'\U0000274C'
 donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n" + \
     emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
 
-help_string = emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
-    emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
+help_string = "<b>HELP</b>\n\n"+emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n<i>Esempi:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
+    emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n<i>Examples:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
 privacy_string = "<b>In order to provide you the service, this bot collects user data like yours recent stops and lines. When you send a location, it is also logged.\nUsing this bot you allow your data to be saved.</b>"
 
 url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
@@ -259,6 +259,8 @@ def makeRecentKeyboard(chat_id):
         buttonLists[1] = dict_user_favourites[chat_id][3:]
     else:
         buttonLists[0] = dict_user_favourites[chat_id]
+
+    buttonLists[3].append("HELP")
     buttonLists[3].append("PRIVACY POLICY")
     keyboard = ReplyKeyboardMarkup(keyboard=buttonLists, resize_keyboard=True)
     return keyboard
@@ -485,12 +487,21 @@ def on_chat_message(msg):
                 logging.info(
                     "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
 
-                bot.sendMessage(chat_id, donation_string, parse_mode='HTML')
                 bot.sendMessage(chat_id, help_string, parse_mode='HTML',
                                 reply_markup=makeRecentKeyboard(chat_id))
+
+            elif (msg["text"] == "HELP"):
+                now = datetime.now()
+                logging.info(
+                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
+
+                bot.sendMessage(chat_id, help_string, parse_mode='HTML',
+                                reply_markup=makeRecentKeyboard(chat_id))
+
             elif (msg["text"] == "PRIVACY POLICY"):
 
-                bot.sendMessage(chat_id, privacy_string, parse_mode='HTML')
+                bot.sendMessage(chat_id, privacy_string, parse_mode='HTML',
+                                reply_markup=makeRecentKeyboard(chat_id))
 
             else:
                 now = datetime.now()
@@ -501,9 +512,7 @@ def on_chat_message(msg):
                 params = msg["text"].split()
                 output_string = getStopInfo(params)
                 addLastReq(chat_id, msg["text"])
-                bot.sendMessage(chat_id, donation_string, parse_mode='HTML',
-                                reply_markup=makeRecentKeyboard(chat_id))
-                if output_string.startswith("HellobusHelp"):
+                if output_string.lower().startswith("<b>help</b>") or output_string.lower().startswith("hellobushelp"):
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML')
                 else:
 
