@@ -184,7 +184,7 @@ def addLastReq(chat_id, req):
     dirty_bit_favourites_list[chat_id] = 0
     if req not in dict_user_favourites[chat_id] and req.replace(" ", "").isdigit():
         dirty_bit_favourites_list[chat_id] = 1
-        if len(dict_user_favourites[chat_id]) >= 9:
+        if len(dict_user_favourites[chat_id]) >= 8:
             dict_user_favourites[chat_id].pop(0)
         dict_user_favourites[chat_id].append(req.strip())
     storeFavourites()
@@ -227,6 +227,21 @@ def distance(lat_user, lon_user, lat_stop, lon_stop):
     return distance
 
 
+def getStopName(stop):
+    
+    for child in xml_root:
+        id_fermata = child[1].text
+
+        if id_fermata == stop:
+            name = child[2].text
+            break
+     else:
+        name = ""
+        
+     return name[:10]   
+    
+    
+
 def makeLocationKeyboard(stringKeyboardList):
     buttonLists = list()
 
@@ -246,19 +261,36 @@ def makeLocationKeyboard(stringKeyboardList):
 
 
 def makeRecentKeyboard(chat_id):
+    
+    
+    row = 5
+    cols = 2
+    
     buttonLists = list()
-    for i in range(4):
-        buttonLists.append(list())
+    for i in range(row):
+        buttonLists.append(list())    
+    
+    col = 0
+    for i in len(dict_user_favourites[chat_id]):
+        name = getStopName(dict_user_favourites[chat_id][i].split()[0])
+        buttonLists[col].append(dict_user_favourites[chat_id][i] + " - " + name)
+        if col % cols == 1:
+            col += 1
+    
 
-    if len(dict_user_favourites[chat_id]) > 6:
-        buttonLists[0] = dict_user_favourites[chat_id][:3]
-        buttonLists[1] = dict_user_favourites[chat_id][3:6]
-        buttonLists[2] = dict_user_favourites[chat_id][6:]
-    elif len(dict_user_favourites[chat_id]) > 3:
-        buttonLists[0] = dict_user_favourites[chat_id][:3]
-        buttonLists[1] = dict_user_favourites[chat_id][3:]
-    else:
-        buttonLists[0] = dict_user_favourites[chat_id]
+#    buttonLists = list()
+#    for i in range(4):
+#        buttonLists.append(list())
+
+#    if len(dict_user_favourites[chat_id]) > 6:
+#        buttonLists[0] = dict_user_favourites[chat_id][:3]
+#        buttonLists[1] = dict_user_favourites[chat_id][3:6]
+#        buttonLists[2] = dict_user_favourites[chat_id][6:]
+#    elif len(dict_user_favourites[chat_id]) > 3:
+#        buttonLists[0] = dict_user_favourites[chat_id][:3]
+#        buttonLists[1] = dict_user_favourites[chat_id][3:]
+#    else:
+#        buttonLists[0] = dict_user_favourites[chat_id]
 
     buttonLists[3].append("HELP")
     buttonLists[3].append("PRIVACY POLICY")
@@ -505,13 +537,17 @@ def on_chat_message(msg):
 
             else:
                 now = datetime.now()
-                stop = msg["text"].split()[0]
+                if "-" in msg["text"]:
+                    mess = msg["text"].split("-").strip()
+                else:
+                    mess = msg["text"]
+                stop = mess.split()[0]
                 lat_lon = getStopLocation(stop)
                 logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### LOCATION = " +
                              lat_lon[0] + ", " + lat_lon[1] + " ### MESSAGGIO = " + repr(msg))
-                params = msg["text"].split()
+                params = mess.split()
                 output_string = getStopInfo(params)
-                addLastReq(chat_id, msg["text"])
+                addLastReq(chat_id, mess)
                 if output_string.lower().startswith("<b>help</b>") or output_string.lower().startswith("hellobushelp"):
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
                                     reply_markup=makeRecentKeyboard(chat_id))
