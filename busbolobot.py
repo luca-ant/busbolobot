@@ -481,7 +481,7 @@ def on_chat_message(msg):
                 output_string = emo_bus + " TPER HelloBus on Telegram! " + \
                     emo_bus + "\n\n" + help_string
                 bot.sendMessage(
-                    chat_id, output_string, parse_mode='HTML', reply_markup=ReplyKeyboardRemove())
+                    chat_id, output_string, parse_mode='HTML', reply_markup=makeRecentKeyboard(chat_id))
             elif (msg["text"] == "/help"):
                 now = datetime.now()
                 logging.info(
@@ -513,9 +513,11 @@ def on_chat_message(msg):
                 output_string = getStopInfo(params)
                 addLastReq(chat_id, msg["text"])
                 if output_string.lower().startswith("<b>help</b>") or output_string.lower().startswith("hellobushelp"):
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML')
+                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
+                                    reply_markup=makeRecentKeyboard(chat_id))
                 else:
-
+                    bot.sendMessage(chat_id, donation_string, parse_mode='HTML',
+                                    reply_markup=makeRecentKeyboard(chat_id))
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
                                     reply_markup=makeInlineTrackKeyboard(params))
 
@@ -570,7 +572,8 @@ def on_chat_message(msg):
             if output_string == "error":
                 output_string = emo_ita + " Parla chiaro! Pronuncia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\n" + \
                     emo_eng + " Speak clearly! Say \n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\""
-                bot.sendMessage(chat_id, output_string, parse_mode='HTML')
+                bot.sendMessage(chat_id, output_string, parse_mode='HTML',
+                                reply_markup=makeRecentKeyboard(chat_id))
             else:
 
                 addLastReq(chat_id, string_from_audio)
@@ -578,8 +581,9 @@ def on_chat_message(msg):
                                 reply_markup=makeRecentKeyboard(chat_id))
                 bot.sendMessage(chat_id, "AUDIO TEXT: \"" +
                                 string_from_audio + "\"", parse_mode='HTML')
-                if output_string.startswith("HellobusHelp"):
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML')
+                if output_string.lower().startswith("<b>help</b>") or output_string.lower().startswith("hellobushelp"):
+                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
+                                    reply_markup=makeRecentKeyboard(chat_id))
                 else:
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
                                     reply_markup=makeInlineTrackKeyboard(params))
@@ -590,13 +594,15 @@ def on_chat_message(msg):
                          " ### MESSAGGIO = " + repr(msg))
             output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
                 emo_eng + " I don't understand... Send a message or your location"
-            bot.sendMessage(chat_id, output_string, parse_mode='HTML')
+            bot.sendMessage(chat_id, output_string, parse_mode='HTML',
+                            reply_markup=makeRecentKeyboard(chat_id))
 
     except Exception as e:
         print(repr(e))
         output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
             emo_eng + " I don't understand... Send a message or your location"
-        bot.sendMessage(chat_id, output_string, parse_mode='HTML')
+        bot.sendMessage(chat_id, output_string, parse_mode='HTML',
+                        reply_markup=makeRecentKeyboard(chat_id))
 
     logging.info("-" * 50)
 
