@@ -504,30 +504,27 @@ def on_callback_query(msg):
 
 def on_chat_message(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
+    msg.pop("chat", None)
+    msg.pop("from", None)
     print(msg)
+    now = datetime.now()
+    logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
+                 " ### MESSAGE from " + str(chat_id) + " = " + str(msg))
 
     try:
         if content_type == "text":
             if (msg["text"] == "/start"):
-                now = datetime.now()
-                logging.info(
-                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
+
                 output_string = emo_bus + " TPER HelloBus on Telegram! " + \
                     emo_bus + "\n\n" + help_string
                 bot.sendMessage(
                     chat_id, output_string, parse_mode='HTML', reply_markup=makeRecentKeyboard(chat_id))
             elif (msg["text"] == "/help"):
-                now = datetime.now()
-                logging.info(
-                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
 
                 bot.sendMessage(chat_id, help_string, parse_mode='HTML',
                                 reply_markup=makeRecentKeyboard(chat_id))
 
             elif (msg["text"] == "HELP"):
-                now = datetime.now()
-                logging.info(
-                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### MESSAGGIO = " + repr(msg))
 
                 bot.sendMessage(chat_id, help_string, parse_mode='HTML',
                                 reply_markup=makeRecentKeyboard(chat_id))
@@ -538,7 +535,6 @@ def on_chat_message(msg):
                                 reply_markup=makeRecentKeyboard(chat_id))
 
             else:
-                now = datetime.now()
                 if "-" in msg["text"]:
                     mess = msg["text"].split("-")
                     mess = ''.join(mess[0].strip())
@@ -548,9 +544,6 @@ def on_chat_message(msg):
 
                 stop = mess.split()[0]
 
-                lat_lon = getStopLocation(stop)
-                logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### LOCATION = " +
-                             lat_lon[0] + ", " + lat_lon[1] + " ### MESSAGGIO = " + repr(msg))
                 params = mess.split()
                 output_string = getStopInfo(params)
                 addLastReq(chat_id, mess)
@@ -564,9 +557,7 @@ def on_chat_message(msg):
                                     reply_markup=makeInlineTrackKeyboard(params))
 
         elif content_type == "location":
-            now = datetime.now()
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
-                         " ### MESSAGGIO = " + repr(msg))
+
             lat_user = msg["location"]["latitude"]
             lon_user = msg["location"]["longitude"]
 
@@ -577,9 +568,7 @@ def on_chat_message(msg):
                             reply_markup=makeLocationKeyboard(output["stringKeyboardList"]))
 
         elif content_type == "voice":
-            now = datetime.now()
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
-                         " ### MESSAGGIO = " + repr(msg))
+
             bot.download_file(msg["voice"]["file_id"], audio_file + ".ogg")
             audio_ogg = AudioSegment.from_ogg(audio_file + ".ogg")
             audio_ogg.export(audio_file + ".wav", format="wav")
@@ -599,15 +588,11 @@ def on_chat_message(msg):
                     "Could not request results from Google Speech Recognition service; {0}".format(e))
 
             logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
-                         " ### AUDIO TEXT = " + string_from_audio)
+                         " ### AUDIO TEXT from " + str(chat_id) + " = " + string_from_audio)
             try:
                 stop = string_from_audio.split()[0]
             except:
                 stop = ""
-
-            lat_lon = getStopLocation(stop)
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
-                         " ### LOCATION = " + lat_lon[0] + ", " + lat_lon[1])
 
             params = string_from_audio.split()
             output_string = getStopInfo(params)
@@ -631,9 +616,7 @@ def on_chat_message(msg):
                                     reply_markup=makeInlineTrackKeyboard(params))
 
         else:
-            now = datetime.now()
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
-                         " ### MESSAGGIO = " + repr(msg))
+
             output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
                 emo_eng + " I don't understand... Send a message or your location"
             bot.sendMessage(chat_id, output_string, parse_mode='HTML',
