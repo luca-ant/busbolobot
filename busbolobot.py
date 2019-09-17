@@ -628,8 +628,6 @@ def on_chat_message(msg):
         bot.sendMessage(chat_id, output_string, parse_mode='HTML',
                         reply_markup=makeRecentKeyboard(chat_id))
 
-    logging.info("-" * 50)
-
 
 restoreFavourites()
 MessageLoop(bot, {'chat': on_chat_message,
