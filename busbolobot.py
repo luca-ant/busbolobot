@@ -139,7 +139,7 @@ class TrackThread(Thread):
                 now = datetime.now()
                 logging.info(
                     "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### TRACKING STOP for " + self.stop + " " + self.line)
-                logging.info("-" * 50)
+
                 print(str(self.chat_id) + " stop " +
                       str(self.stop) + " " + str(self.line))
                 # self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING STOPPED!", parse_mode='HTML', reply_markup=makeInlineTrackKeyboard((self.stop, self.line)))
@@ -152,7 +152,7 @@ class TrackThread(Thread):
             now = datetime.now()
             logging.info(
                 "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### TRACKING END for " + self.stop + " " + self.line)
-            logging.info("-" * 50)
+
             try:
                 print(str(self.chat_id) + " end " +
                       str(self.stop) + " " + str(self.line))
@@ -453,7 +453,6 @@ def on_callback_query(msg):
             logging.info(
                 "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(from_id) + " ### TRACKING START " + stop + " " + line + " for " + str(
                     t) + " min")
-            logging.info("-" * 50)
 
             thread = TrackThread(t, bot, msg, stop, line, output_string)
 
