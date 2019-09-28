@@ -48,7 +48,7 @@ emo_pin = u'\U0001F4CC'
 donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n" + \
     emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
 
-help_string = "<b>HELP</b>\n\n"+emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n<i>Esempi:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
+help_string = emo_help + "<b>HELP</b>\n\n"+emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n<i>Esempi:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
     emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n<i>Examples:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
 privacy_string = "<b>In order to provide you the service, this bot collects user data like yours recent stops and lines. When you send a location, it is also logged.\nUsing this bot you allow your data to be saved.</b>"
 
@@ -178,7 +178,7 @@ class TrackThread(Thread):
             try:
                 print(str(self.chat_id) + " end " +
                       str(self.stop) + " " + str(self.line))
-                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n\nTRACKING ENDED!", parse_mode='HTML',
+                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n<b>TRACKING ENDED!</b>", parse_mode='HTML',
                                          reply_markup=makeInlineTrackKeyboard(self.chat_id, (self.stop, self.line)))
             except Exception as e:
                 print(repr(e))
@@ -648,7 +648,7 @@ def on_chat_message(msg):
                 params = mess.split()
                 output_string = getStopInfo(params)
                 # addFav(chat_id, mess)
-                if output_string.lower().startswith("<b>help</b>") or output_string.lower().startswith("hellobushelp"):
+                if "<b>help</b>" in output_string.lower() or "hellobushelp" in output_string.lower():
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
                                     reply_markup=makeMainKeyboard(chat_id))
                 else:
@@ -709,7 +709,7 @@ def on_chat_message(msg):
                                 reply_markup=makeMainKeyboard(chat_id))
                 bot.sendMessage(chat_id, "AUDIO TEXT: \"" +
                                 string_from_audio + "\"", parse_mode='HTML')
-                if output_string.lower().startswith("<b>help</b>") or output_string.lower().startswith("hellobushelp"):
+                if "<b>help</b>" in output_string.lower() or "hellobushelp" in output_string.lower():
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
                                     reply_markup=makeMainKeyboard(chat_id))
                 else:
