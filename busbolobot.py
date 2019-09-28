@@ -271,18 +271,22 @@ def getStopName(stop):
 
 
 def makeLocationKeyboard(stringKeyboardList):
-    buttonLists = list()
 
-    for i in range(0, int(len(stringKeyboardList) / 3) + 1, 1):
+    row = int(len(stringKeyboardList) / 3) + 2
+    cols = 3
+
+    buttonLists = list()
+    for i in range(row):
         buttonLists.append(list())
+
     i = 0
     index = 0
     for str in stringKeyboardList:
         buttonLists[index].append(str)
         i += 1
-        if i % 3 == 0:
+        if i % col == 0:
             index = index + 1
-
+    buttonLists[row - 1].append(emo_back + " BACK TO MAIN")
     keyboard = ReplyKeyboardMarkup(keyboard=buttonLists, resize_keyboard=True)
 
     return keyboard
