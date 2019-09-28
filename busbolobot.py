@@ -48,8 +48,8 @@ emo_pin = u'\U0001F4CC'
 donation_string = emo_ita + " Ti piace questo bot? Se vuoi sostenerlo puoi fare una donazione qui! -> https://www.paypal.me/lucaant\n\n" + \
     emo_eng + " Do you like this bot? If you want to support it you can make a donation here -> https://www.paypal.me/lucaant"
 
-help_string = emo_help + "<b>HELP</b>\n\n"+emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n<i>Esempi:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
-    emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n<i>Examples:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
+help_string = emo_help + " <b>HELP</b>\n\n"+emo_ita + " ITALIANO\n" + "Invia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\noppure\n\"NUMERO_FERMATA LINEA ORA\" \noppure\nla tua posizione per ricevere l'elenco delle fermate vicine e poi scegli la fermata e la linea che ti interessa dalla tastiera sotto.\n<i>Esempi:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\n<b>Puoi anche aggiungere le fermate che usi più spesso ai preferiti per averle sempre a portata di mano!</b>\n\nPer problemi e malfunzionamenti inviare una mail a luca.ant96@libero.it descrivendo dettagliatamente il problema.\n\n" + \
+    emo_eng + " ENGLISH\n" + "Send\n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\"\nor\n\"STOP_NUMBER LINE TIME\"\nor\nyour location to get the list of nearby stops and then choose one from keyboard below.\n<i>Examples:</i>\n<code>4004</code>\n<code>4004 27</code>\n<code>4004 27 0810</code>\n\n<b>You can also add the stops you use most often to your favourites to always have them at hand!</b>\n\nFor issues send a mail to luca.ant96@libero.it describing the problem in detail."
 privacy_string = "<b>In order to provide you the service, this bot collects user data like yours recent stops and lines. When you send a location, it is also logged.\nUsing this bot you allow your data to be saved.</b>"
 
 url = "https://hellobuswsweb.tper.it/web-services/hello-bus.asmx/QueryHellobus"
@@ -553,18 +553,23 @@ def on_callback_query(msg):
             else:
                 stop = ""
                 line = ""
+            if stop+" "+line not in dict_user_favourites[from_id]:
+                addFav(from_id, stop+" "+line)
 
-            addFav(from_id, stop+" "+line)
-            bot.answerCallbackQuery(query_id, text="ADDED TO FAVOURITES!")
+                output_string = "<b>" + stop + " " + line+" WAS ADDED TO YOUR FAVOURITES</b>"
 
-            output_string = "<b>" + stop + " " + line+" WAS ADDED TO YOUR FAVOURITES</b>"
+                bot.sendMessage(from_id, output_string, parse_mode='HTML',
+                                reply_markup=makeFavouritesKeyboard(from_id))
+                output_string = getStopInfo((stop, line))
 
-            bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                            reply_markup=makeFavouritesKeyboard(from_id))
-            output_string = getStopInfo((stop, line))
+                bot.sendMessage(from_id, output_string, parse_mode='HTML',
+                                reply_markup=makeInlineTrackKeyboard(from_id, (stop, line)))
+            else:
+                output_string = "<b>" + stop + " " + line + \
+                    " ALREADY IN YOUR FAVOURITES</b>"
 
-            bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                            reply_markup=makeInlineTrackKeyboard(from_id, (stop, line)))
+                bot.sendMessage(from_id, output_string, parse_mode='HTML',
+                                reply_markup=makeFavouritesKeyboard(from_id))
 
         elif (query_data.startswith("remove")):
             array = query_data.split()
@@ -580,15 +585,21 @@ def on_callback_query(msg):
                 stop = ""
                 line = ""
 
-            rmFav(from_id, stop+" "+line)
+            if stop+" "+line in dict_user_favourites[from_id]:
 
-            bot.answerCallbackQuery(query_id, text="REMOVED FROM FAVOURITES!")
+                rmFav(from_id, stop+" "+line)
 
-            output_string = "<b>" + stop + " " + line + \
-                " WAS REMOVED FROM YOUR FAVOURITES</b>"
+                output_string = "<b>" + stop + " " + line + \
+                    " WAS REMOVED FROM YOUR FAVOURITES</b>"
 
-            bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                            reply_markup=makeFavouritesKeyboard(from_id))
+                bot.sendMessage(from_id, output_string, parse_mode='HTML',
+                                reply_markup=makeFavouritesKeyboard(from_id))
+            else:
+                output_string = "<b>" + stop + " " + line + \
+                    " NOT IN YOUR FAVOURITES</b>"
+
+                bot.sendMessage(from_id, output_string, parse_mode='HTML',
+                                reply_markup=makeFavouritesKeyboard(from_id))
 
     except Exception as e:
         print(repr(e))
