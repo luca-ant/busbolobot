@@ -553,7 +553,10 @@ def on_callback_query(msg):
             else:
                 stop = ""
                 line = ""
-            if stop+" "+line not in dict_user_favourites[from_id]:
+
+            fav = stop+" "+line
+            fav = fav.strip()
+            if fav not in dict_user_favourites[from_id]:
                 addFav(from_id, stop+" "+line)
 
                 output_string = "<b>" + stop + " " + line+" WAS ADDED TO YOUR FAVOURITES</b>"
@@ -585,7 +588,9 @@ def on_callback_query(msg):
                 stop = ""
                 line = ""
 
-            if stop+" "+line in dict_user_favourites[from_id]:
+            fav = stop+" "+line
+            fav = fav.strip()
+            if fav in dict_user_favourites[from_id]:
 
                 rmFav(from_id, stop+" "+line)
 
