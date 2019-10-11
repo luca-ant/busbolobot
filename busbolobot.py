@@ -18,6 +18,7 @@ from telepot.loop import MessageLoop
 from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from threading import Lock, Thread
 
+
 with open(sys.argv[1]) as f:
     token = f.read().strip()
 f.close()
@@ -70,18 +71,21 @@ notify_threads = collections.defaultdict()
 audio_file = "/tmp/audio_temp"
 
 
-def makeInlineStopKeyboard(params):
+def makeInlineStopKeyboard(params, time):
     try:
         stop = params[0]
     except:
         stop = ""
     try:
-        line = params[1]
+        line = " " + params[1]
     except:
         line = ""
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=emo_notify + ' RESTART for ' + str(time) + ' min',
+                              callback_data="notify " + stop + line + " " + str(time))],
         [InlineKeyboardButton(text=emo_stop + ' STOP!',
-                              callback_data="stop " + stop + " " + line)]
+                              callback_data="stop " + stop + line)]
     ])
     return keyboard
 
@@ -95,7 +99,9 @@ def makeInlineTrackKeyboard(chat_id, params):
         line = " " + params[1]
     except:
         line = ""
+
     s = stop + line
+
     if s.strip() in dict_user_favourites[chat_id]:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text=emo_cross + ' REMOVE "' + stop + line+'" FROM FAVOURITES',
@@ -136,7 +142,7 @@ class TrackThread(Thread):
         self.count = time_notify
         self.bot = bot
         self.last_message = first_msg
-        self.keyboard = makeInlineStopKeyboard((stop, line))
+        self.keyboard = makeInlineStopKeyboard((stop, line), time_notify)
 
     def run(self):
         while (self.count > 0):
@@ -509,7 +515,7 @@ def on_callback_query(msg):
             try:
                 #        bot.sendMessage(from_id,  parse_mode='HTML',"TRACKING STARTED!")
                 bot.editMessageText(
-                    msg_edited, output_string, parse_mode='HTML', reply_markup=makeInlineStopKeyboard((stop, line)))
+                    msg_edited, output_string, parse_mode='HTML', reply_markup=makeInlineStopKeyboard((stop, line), t))
             except Exception as e:
                 print(repr(e))
 
