@@ -82,10 +82,13 @@ def makeInlineStopKeyboard(params, time):
         line = ""
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=emo_notify + ' RESTART for ' + str(time) + ' min',
-                              callback_data="notify " + stop + line + " " + str(time))],
         [InlineKeyboardButton(text=emo_stop + ' STOP!',
-                              callback_data="stop " + stop + line)]
+                              callback_data="stop " + stop + line)],
+        [InlineKeyboardButton(text=emo_notify + ' RESTART for 5 min',
+                              callback_data="notify " + stop + line + " " + "5")],
+        [InlineKeyboardButton(text=emo_notify + ' RESTART for 10 min',
+                              callback_data="notify " + stop + line + " " + "10")]
+
     ])
     return keyboard
 
