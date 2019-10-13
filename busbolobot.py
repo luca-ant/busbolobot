@@ -73,21 +73,23 @@ audio_file = "/tmp/audio_temp"
 
 def makeInlineStopKeyboard(params, time):
     try:
-        stop = params[0]
+        stop = params[0].strip()
     except:
         stop = ""
     try:
-        line = " " + params[1]
+        line = " " + params[1].strip()
     except:
         line = ""
 
+    s = (stop + line).strip()
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=emo_stop + ' STOP!',
-                              callback_data="stop " + stop + line)],
+                              callback_data="stop " + s)],
         [InlineKeyboardButton(text=emo_notify + ' RESTART for 5 min',
-                              callback_data="notify " + stop + line + " " + "5")],
+                              callback_data="notify " + s + " 5")],
         [InlineKeyboardButton(text=emo_notify + ' RESTART for 10 min',
-                              callback_data="notify " + stop + line + " " + "10")]
+                              callback_data="notify " + s + " 10")]
 
     ])
     return keyboard
@@ -95,38 +97,36 @@ def makeInlineStopKeyboard(params, time):
 
 def makeInlineTrackKeyboard(chat_id, params):
     try:
-        stop = params[0]
+        stop = params[0].strip()
     except:
         stop = ""
     try:
-        line = " " + params[1]
+        line = " " + params[1].strip()
     except:
         line = ""
-
-    s = stop + line
-
+    s = (stop + line).strip()
     if s.strip() in dict_user_favourites[chat_id]:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=emo_cross + ' REMOVE "' + stop + line+'" FROM FAVOURITES',
-                                  callback_data="remove " + stop + line)],
+            [InlineKeyboardButton(text=emo_cross + ' REMOVE "' + s + '" FROM FAVOURITES',
+                                  callback_data="remove " + s)],
             [InlineKeyboardButton(text=emo_notify + ' NOTIFY for 5 min',
-                                  callback_data="notify " + stop + line + " 5")],
+                                  callback_data="notify " + s + " 5")],
             [InlineKeyboardButton(text=emo_notify + ' NOTIFY for 10 min',
-                                  callback_data="notify " + stop + line + " 10")],
+                                  callback_data="notify " + s + " 10")],
             [InlineKeyboardButton(text=emo_notify + ' NOTIFY for 15 min',
-                                  callback_data="notify " + stop + line + " 15")]
+                                  callback_data="notify " + s + " 15")]
         ])
 
     else:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=emo_fav + ' ADD "' + stop + line+'" TO FAVOURITES',
-                                  callback_data="add " + stop + line)],
+            [InlineKeyboardButton(text=emo_fav + ' ADD "' + s + '" TO FAVOURITES',
+                                  callback_data="add " + s)],
             [InlineKeyboardButton(text=emo_notify + ' NOTIFY for 5 min',
-                                  callback_data="notify " + stop + line + " 5")],
+                                  callback_data="notify " + s + " 5")],
             [InlineKeyboardButton(text=emo_notify + ' NOTIFY for 10 min',
-                                  callback_data="notify " + stop + line + " 10")],
+                                  callback_data="notify " + s + " 10")],
             [InlineKeyboardButton(text=emo_notify + ' NOTIFY for 15 min',
-                                  callback_data="notify " + stop + line + " 15")]
+                                  callback_data="notify " + s + " 15")]
         ])
     return keyboard
 
@@ -139,8 +139,8 @@ class TrackThread(Thread):
             msg, flavor='callback_query')
         self.chat_id = from_id
         self.msg_id = msg['message']['message_id']
-        self.stop = stop
-        self.line = line
+        self.stop = stop.strip()
+        self.line = line.strip()
         self.stop_flag = False
         self.count = time_notify
         self.bot = bot
@@ -164,7 +164,7 @@ class TrackThread(Thread):
             #                self.bot.editMessageText(self.msg_edited, output_string,parse_mode='HTML', reply_markup=self.keyboard)
 
             except Exception as e:
-                print(repr(e))
+                traceback.print_exc()
 
         if self.stop_flag:
             try:
@@ -176,8 +176,11 @@ class TrackThread(Thread):
                       str(self.stop) + " " + str(self.line))
                 self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, parse_mode='HTML',
                                          reply_markup=makeInlineTrackKeyboard(self.chat_id, (self.stop, self.line)))
+            except telepot.exception.TelegramError:
+                traceback.print_exc()
+                pass
             except Exception as e:
-                print(repr(e))
+                traceback.print_exc()
         else:
             #    self.bot.sendMessage(self.chat_id,  parse_mode='HTML',"TRACKING ENDED!")
             now = datetime.now()
@@ -190,7 +193,7 @@ class TrackThread(Thread):
                 self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n<b>TRACKING ENDED!</b>", parse_mode='HTML',
                                          reply_markup=makeInlineTrackKeyboard(self.chat_id, (self.stop, self.line)))
             except Exception as e:
-                print(repr(e))
+                traceback.print_exc()
 
     def set_stop_flag(self, b):
         self.stop_flag = b
@@ -207,7 +210,7 @@ def restoreFavourites():
                     dict_user_favourites[chat_id] = fav
 
         except Exception as e:
-            print(repr(e))
+            traceback.print_exc()
 
 
 def addFav(chat_id, req):
@@ -244,7 +247,7 @@ def storeFavourites():
                     f.write(":".join(dict_user_favourites[key]) + "\n")
 
         except Exception as e:
-            print(repr(e))
+            traceback.print_exc()
     writer_lock.release()
 
 
@@ -293,7 +296,7 @@ def makeLocationKeyboard(stringKeyboardList):
     for str in stringKeyboardList:
         buttonLists[index].append(str)
         i += 1
-        if i % col == 0:
+        if i % cols == 0:
             index = index + 1
     buttonLists[row - 1].append(emo_back + " BACK TO MAIN")
     keyboard = ReplyKeyboardMarkup(keyboard=buttonLists, resize_keyboard=True)
@@ -516,6 +519,7 @@ def on_callback_query(msg):
                 notify_threads[from_id].set_stop_flag(True)
             except:
                 pass
+
             notify_threads[from_id] = thread
             thread.start()
 
@@ -523,19 +527,22 @@ def on_callback_query(msg):
                 #        bot.sendMessage(from_id,  parse_mode='HTML',"TRACKING STARTED!")
                 bot.editMessageText(
                     msg_edited, output_string, parse_mode='HTML', reply_markup=makeInlineStopKeyboard((stop, line), t))
+            except telepot.exception.TelegramError:
+                bot.answerCallbackQuery(query_id, text="SLOW DOWN!!")
+
             except Exception as e:
-                print(repr(e))
+                traceback.print_exc()
 
             bot.answerCallbackQuery(query_id, text="TRACKING STARTED!")
 
         elif (query_data.startswith("stop")):
             array = query_data.split()
             if len(array) == 2:
-                stop = array[1]
+                stop = array[1].strip()
                 line = ""
             elif len(array) == 3:
-                stop = array[1]
-                line = array[2]
+                stop = array[1].strip()
+                line = array[2].strip()
             else:
                 stop = ""
                 line = ""
@@ -558,11 +565,11 @@ def on_callback_query(msg):
         elif (query_data.startswith("add")):
             array = query_data.split()
             if len(array) == 2:
-                stop = array[1]
+                stop = array[1].strip()
                 line = ""
             elif len(array) == 3:
-                stop = array[1]
-                line = array[2]
+                stop = array[1].strip()
+                line = array[2].strip()
             else:
                 stop = ""
                 line = ""
@@ -590,12 +597,12 @@ def on_callback_query(msg):
         elif (query_data.startswith("remove")):
             array = query_data.split()
             if len(array) == 2:
-                stop = array[1]
+                stop = array[1].strip()
                 line = ""
                 params = (stop,)
             elif len(array) == 3:
-                stop = array[1]
-                line = array[2]
+                stop = array[1].strip()
+                line = array[2].strip()
                 params = (stop, line)
             else:
                 stop = ""
@@ -619,8 +626,12 @@ def on_callback_query(msg):
                 bot.sendMessage(from_id, output_string, parse_mode='HTML',
                                 reply_markup=makeFavouritesKeyboard(from_id))
 
+    except telepot.exception.TelegramError:
+        bot.answerCallbackQuery(query_id, text="SLOW DOWN!!")
+        traceback.print_exc()
+
     except Exception as e:
-        print(repr(e))
+        traceback.print_exc()
 
 
 def on_chat_message(msg):
