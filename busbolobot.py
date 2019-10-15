@@ -12,7 +12,7 @@ import speech_recognition as sr
 import requests
 import threading
 import telepot
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 from telepot.loop import MessageLoop
 from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
@@ -95,7 +95,7 @@ def makeInlineStopKeyboard(params, time):
     return keyboard
 
 
-def makeInlineTrackKeyboard(chat_id, params):
+def makeInlineNotifyKeyboard(chat_id, params):
     try:
         stop = params[0].strip()
     except:
@@ -131,7 +131,7 @@ def makeInlineTrackKeyboard(chat_id, params):
     return keyboard
 
 
-class TrackThread(Thread):
+class NotifyThread(Thread):
     def __init__(self, time_notify, bot, msg, stop, line, first_msg):
 
         Thread.__init__(self)
@@ -139,15 +139,20 @@ class TrackThread(Thread):
             msg, flavor='callback_query')
         self.chat_id = from_id
         self.msg_id = msg['message']['message_id']
+        self.time_notify = time_notify
         self.stop = stop.strip()
         self.line = line.strip()
         self.stop_flag = False
         self.count = time_notify
         self.bot = bot
         self.last_message = first_msg
+        self.end_time = None
         self.keyboard = makeInlineStopKeyboard((stop, line), time_notify)
 
     def run(self):
+
+        self.end_time = datetime.now() + timedelta(minutes=self.time_notify)
+
         while (self.count > 0):
             try:
                 self.count = self.count - 1
@@ -155,8 +160,11 @@ class TrackThread(Thread):
                 if self.stop_flag:
                     break
                 output_string = getStopInfo((self.stop, self.line))
+                output_string += "\n<b>NOTIFICATIONS UP TO " + \
+                    self.end_time.strftime("%H:%M")+"</b>"
                 self.last_message = output_string
                 self.bot.deleteMessage((self.chat_id, self.msg_id))
+
                 new_msg = self.bot.sendMessage(
                     self.chat_id, output_string, parse_mode='HTML', reply_markup=self.keyboard)
                 self.msg_id = new_msg["message_id"]
@@ -170,28 +178,27 @@ class TrackThread(Thread):
             try:
                 now = datetime.now()
                 logging.info(
-                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### TRACKING STOP for " + self.stop + " " + self.line)
+                    "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### NOTIFICATIONS STOP for " + self.stop + " " + self.line)
 
                 print(str(self.chat_id) + " stop " +
                       str(self.stop) + " " + str(self.line))
                 self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, parse_mode='HTML',
-                                         reply_markup=makeInlineTrackKeyboard(self.chat_id, (self.stop, self.line)))
+                                         reply_markup=makeInlineNotifyKeyboard(self.chat_id, (self.stop, self.line)))
             except telepot.exception.TelegramError:
                 traceback.print_exc()
                 pass
             except Exception as e:
                 traceback.print_exc()
         else:
-            #    self.bot.sendMessage(self.chat_id,  parse_mode='HTML',"TRACKING ENDED!")
             now = datetime.now()
             logging.info(
-                "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### TRACKING END for " + self.stop + " " + self.line)
+                "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(self.chat_id) + " ### NOTIFICATIONS END for " + self.stop + " " + self.line)
 
             try:
                 print(str(self.chat_id) + " end " +
                       str(self.stop) + " " + str(self.line))
-                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n<b>TRACKING ENDED!</b>", parse_mode='HTML',
-                                         reply_markup=makeInlineTrackKeyboard(self.chat_id, (self.stop, self.line)))
+                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n<b>NOTIFICATIONS ENDED!</b>", parse_mode='HTML',
+                                         reply_markup=makeInlineNotifyKeyboard(self.chat_id, (self.stop, self.line)))
             except Exception as e:
                 traceback.print_exc()
 
@@ -506,14 +513,18 @@ def on_callback_query(msg):
                 stop = ""
                 line = ""
                 t = 0
-            output_string = getStopInfo((stop, line))
 
+            end_time = datetime.now() + timedelta(minutes=t)
+
+            output_string = getStopInfo((stop, line))
+            output_string += "\n<b>NOTIFICATIONS STARTED UP TO " + \
+                end_time.strftime("%H:%M") + "</b>"
             now = datetime.now()
             logging.info(
-                "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(from_id) + " ### TRACKING START " + stop + " " + line + " for " + str(
+                "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(from_id) + " ### NOTIFICATIONS START " + stop + " " + line + " for " + str(
                     t) + " min")
 
-            thread = TrackThread(t, bot, msg, stop, line, output_string)
+            thread = NotifyThread(t, bot, msg, stop, line, output_string)
 
             try:
                 notify_threads[from_id].set_stop_flag(True)
@@ -524,7 +535,6 @@ def on_callback_query(msg):
             thread.start()
 
             try:
-                #        bot.sendMessage(from_id,  parse_mode='HTML',"TRACKING STARTED!")
                 bot.editMessageText(
                     msg_edited, output_string, parse_mode='HTML', reply_markup=makeInlineStopKeyboard((stop, line), t))
             except telepot.exception.TelegramError:
@@ -533,7 +543,8 @@ def on_callback_query(msg):
             except Exception as e:
                 traceback.print_exc()
 
-            bot.answerCallbackQuery(query_id, text="TRACKING STARTED!")
+            bot.answerCallbackQuery(
+                query_id, text="NOTIFICATIONS STARTED!")
 
         elif (query_data.startswith("stop")):
             array = query_data.split()
@@ -553,12 +564,12 @@ def on_callback_query(msg):
                 pass
 
             output_string = getStopInfo((stop, line))
-            output_string += "\n<b>TRACKING STOPPED!</b>"
-            bot.answerCallbackQuery(query_id, text="TRACKING STOPPED!")
+            output_string += "\n<b>NOTIFICATIONS STOPPED!</b>"
+            bot.answerCallbackQuery(query_id, text="NOTIFICATIONS STOPPED!")
 
             try:
                 bot.editMessageText(msg_edited, output_string, parse_mode='HTML',
-                                    reply_markup=makeInlineTrackKeyboard(from_id, (stop, line)))
+                                    reply_markup=makeInlineNotifyKeyboard(from_id, (stop, line)))
             except telepot.exception.TelegramError:
                 pass
 
@@ -586,7 +597,7 @@ def on_callback_query(msg):
                 output_string = getStopInfo((stop, line))
 
                 bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                                reply_markup=makeInlineTrackKeyboard(from_id, (stop, line)))
+                                reply_markup=makeInlineNotifyKeyboard(from_id, (stop, line)))
             else:
                 output_string = "<b>" + stop + " " + line + \
                     " ALREADY IN YOUR FAVOURITES</b>"
@@ -695,7 +706,7 @@ def on_chat_message(msg):
                     bot.sendMessage(chat_id, donation_string,
                                     parse_mode='HTML')
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                    reply_markup=makeInlineTrackKeyboard(chat_id, params))
+                                    reply_markup=makeInlineNotifyKeyboard(chat_id, params))
 
         elif content_type == "location":
 
@@ -754,7 +765,7 @@ def on_chat_message(msg):
                                     reply_markup=makeMainKeyboard(chat_id))
                 else:
                     bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                    reply_markup=makeInlineTrackKeyboard(chat_id, params))
+                                    reply_markup=makeInlineNotifyKeyboard(chat_id, params))
 
         else:
 
