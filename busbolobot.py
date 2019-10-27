@@ -1,4 +1,5 @@
-﻿import os
+﻿from datetime import datetime
+import os
 import csv
 import collections
 import sys
@@ -7,15 +8,15 @@ import time
 import logging
 import traceback
 import xml.etree.ElementTree as ET
-from pydub import AudioSegment
-import speech_recognition as sr
 import requests
 import threading
-import telepot
 from datetime import datetime, timedelta
 from collections import defaultdict
-from telepot.loop import MessageLoop
-from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, Handler
+from telegram import ParseMode
+
+from telegram import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from threading import Lock, Thread
 
 
@@ -23,7 +24,6 @@ with open(sys.argv[1]) as f:
     token = f.read().strip()
 f.close()
 
-bot = telepot.Bot(token)
 
 emo_clock = u'\U0001F552'
 emo_sat = u'\U0001F6F0'
@@ -60,7 +60,6 @@ favourite_filename = "favourite.csv"
 logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
 
 writer_lock = Lock()
-audio_recognizer = sr.Recognizer()
 
 tree = ET.parse(file_xml_fermate)
 xml_root = tree.getroot()
@@ -132,19 +131,19 @@ def makeInlineNotifyKeyboard(chat_id, params):
 
 
 class NotifyThread(Thread):
-    def __init__(self, time_notify, bot, msg, stop, line, first_msg):
+    def __init__(self, update, context, time_notify, stop, line, first_msg):
 
         Thread.__init__(self)
-        query_id, from_id, query_data = telepot.glance(
-            msg, flavor='callback_query')
-        self.chat_id = from_id
-        self.msg_id = msg['message']['message_id']
+
+        self.chat_id = update.callback_query.message.chat_id
+        self.update = update
+        self.context = context
+        self.msg_id = update.callback_query.message.message_id
         self.time_notify = time_notify
         self.stop = stop.strip()
         self.line = line.strip()
         self.stop_flag = False
         self.count = time_notify
-        self.bot = bot
         self.last_message = first_msg
         self.end_time = None
         self.keyboard = makeInlineStopKeyboard((stop, line), time_notify)
@@ -163,15 +162,15 @@ class NotifyThread(Thread):
                 output_string += "\n<b>NOTIFICATIONS UP TO " + \
                     self.end_time.strftime("%H:%M")+"</b>"
                 self.last_message = output_string
-                self.bot.deleteMessage((self.chat_id, self.msg_id))
 
-                new_msg = self.bot.sendMessage(
-                    self.chat_id, output_string, parse_mode='HTML', reply_markup=self.keyboard)
-                self.msg_id = new_msg["message_id"]
+                self.context.bot.delete_message(chat_id=self.chat_id,
+                                                message_id=self.msg_id)
 
-            #                self.bot.editMessageText(self.msg_edited, output_string,parse_mode='HTML', reply_markup=self.keyboard)
+                new_msg = self.update.callback_query.message.reply_html(
+                    output_string, reply_markup=self.keyboard)
+                self.msg_id = new_msg.message_id
 
-            except Exception as e:
+            except:
                 traceback.print_exc()
 
         if self.stop_flag:
@@ -182,13 +181,13 @@ class NotifyThread(Thread):
 
                 print(str(self.chat_id) + " stop " +
                       str(self.stop) + " " + str(self.line))
-                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message, parse_mode='HTML',
-                                         reply_markup=makeInlineNotifyKeyboard(self.chat_id, (self.stop, self.line)))
-            except telepot.exception.TelegramError:
+
+                self.context.bot.edit_message_text(self.last_message, chat_id=self.chat_id,
+                                                   message_id=self.msg_id, parse_mode=ParseMode.HTML,
+                                                   reply_markup=makeInlineNotifyKeyboard(self.chat_id, (self.stop, self.line)))
+            except:
                 traceback.print_exc()
-                pass
-            except Exception as e:
-                traceback.print_exc()
+
         else:
             now = datetime.now()
             logging.info(
@@ -197,9 +196,10 @@ class NotifyThread(Thread):
             try:
                 print(str(self.chat_id) + " end " +
                       str(self.stop) + " " + str(self.line))
-                self.bot.editMessageText((self.chat_id, self.msg_id), self.last_message + "\n<b>NOTIFICATIONS ENDED!</b>", parse_mode='HTML',
-                                         reply_markup=makeInlineNotifyKeyboard(self.chat_id, (self.stop, self.line)))
-            except Exception as e:
+                self.context.bot.edit_message_text(self.last_message + "\n<b>NOTIFICATIONS ENDED!</b>", chat_id=self.chat_id,
+                                                   message_id=self.msg_id, parse_mode=ParseMode.HTML,
+                                                   reply_markup=makeInlineNotifyKeyboard(self.chat_id, (self.stop, self.line)))
+            except:
                 traceback.print_exc()
 
     def set_stop_flag(self, b):
@@ -216,7 +216,7 @@ def restoreFavourites():
                     fav = row[1:9]
                     dict_user_favourites[chat_id] = fav
 
-        except Exception as e:
+        except:
             traceback.print_exc()
 
 
@@ -273,6 +273,136 @@ def distance(lat_user, lon_user, lat_stop, lon_stop):
 
     distance = p * r * 1000
     return distance
+
+
+def parseResponse(stop, line, text):
+    try:
+        name = getStopName(stop)
+        nextArr = text.split(sep=",")
+        first = nextArr[0][14:].strip()
+        firstInfo = first.split()
+        result = list()
+        result.append(emo_bus + " [<b>" + firstInfo[0] + "</b>] ")
+
+        if firstInfo[1] == "DaSatellite":
+            result.append(emo_sat + " DA SATELLITE ")
+        else:
+            result.append(emo_clock + " DA ORARIO ")
+
+        tdiff = datetime.strptime(
+            firstInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
+
+        result.append("tra <b>" + repr(int(tdiff.seconds / 60)) +
+                      " minuto/i </b>(" + firstInfo[2] + ")")
+
+        if len(nextArr) > 1:
+            second = nextArr[1].strip()
+            secondInfo = second.split()
+
+            result.append("\n" + emo_bus + " [<b>" + secondInfo[0] + "</b>] ")
+
+            if secondInfo[1] == "DaSatellite":
+                result.append(emo_sat + " DA SATELLITE ")
+            else:
+                result.append(emo_clock + " DA ORARIO ")
+
+            tdiff = datetime.strptime(
+                secondInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
+            result.append("tra <b>" + repr(int(tdiff.seconds / 60)
+                                           ) + " minuto/i </b>(" + secondInfo[2] + ")")
+
+        result.append("\n")
+        result.append(emo_ita)
+        if (line != ""):
+            result.append(" Linea: <b>" + line + "</b>")
+
+        result.append(" Fermata: <b>" + stop +
+                      "</b> " + "<i>("+name+")</i>\n")
+        result.append(emo_eng)
+        if (line != ""):
+            result.append(" Line: <b>" + line + "</b>")
+
+        result.append(" Stop: <b>" + stop +
+                      "</b> " + "<i>("+name+")</i>\n")
+
+        return "".join(result)
+    except:
+        traceback.print_exc()
+        return text
+
+
+def makeNearbyOutput(lat_user, lon_user):
+    result = collections.defaultdict()
+    busLines = collections.defaultdict(list)
+    output = list()
+    stringKeyboardList = list()
+    output.append(emo_ita + " FERMATE VICINE\n" +
+                  emo_eng + " NEARBY STOPS\n\n")
+    for child in xml_root:
+        linea = child[0].text
+        id_fermata = child[1].text
+        nome_fermata = child[2].text
+        lat_fermata = child[7].text
+        lon_fermata = child[8].text
+
+        dist = distance(lat_user, lon_user,
+                        float(lat_fermata), float(lon_fermata))
+        if (dist < 25):
+
+            element = id_fermata + " - " + nome_fermata + \
+                " (" + repr(int(dist)) + " m)"
+            busLines[element].append(linea)
+            stringKeyboardList.append(id_fermata + " " + linea)
+            if id_fermata not in stringKeyboardList:
+                stringKeyboardList.append(id_fermata)
+
+    for s in busLines.keys():
+        output.append(s)
+        output.append("\n")
+        output.append("Linee: ")
+        for n in busLines[s]:
+            output.append(n + " ")
+        output.append("\n\n")
+
+    stringKeyboardList.sort()
+    result["stringKeyboardList"] = stringKeyboardList
+    result["output_string"] = "".join(output)
+    return result
+
+
+def makeReq(stop, line, time):
+    body = "fermata=" + stop + "&linea=" + line + "&oraHHMM=" + time
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    response = requests.post(url=url, data=body, headers=headers)
+
+    root = ET.fromstring(response.text)
+
+    return parseResponse(stop, line, root.text)
+
+
+def getStopInfo(params):
+    if len(params) >= 3:
+        return makeReq(params[0], params[1], params[2])
+    elif len(params) == 2:
+        return makeReq(params[0], params[1], "")
+    elif len(params) == 1:
+        return makeReq(params[0], "", "")
+    else:
+        return "error"
+
+
+def getStopLocation(stop):
+    if stop == "":
+        return ("LAT not found", "LON not found")
+
+    for child in xml_root:
+        id_fermata = child[1].text
+
+        if id_fermata == stop:
+            lat_fermata = child[7].text
+            lon_fermata = child[8].text
+            return (lat_fermata, lon_fermata)
+    return ("LAT not found", "LON not found")
 
 
 def getStopName(stop):
@@ -363,142 +493,14 @@ def makeMainKeyboard(chat_id):
     return keyboard
 
 
-def parseResponse(stop, line, text):
+def callback_query(update, context):
     try:
-        name = getStopName(stop)
-        nextArr = text.split(sep=",")
-        first = nextArr[0][14:].strip()
-        firstInfo = first.split()
-        result = list()
-        result.append(emo_bus + " [<b>" + firstInfo[0] + "</b>] ")
+        text = update.callback_query.message.text
+        chat_id = update.callback_query.message.chat_id
+        message_id = update.callback_query.message.message_id
+        query_data = update.callback_query.data
 
-        if firstInfo[1] == "DaSatellite":
-            result.append(emo_sat + " DA SATELLITE ")
-        else:
-            result.append(emo_clock + " DA ORARIO ")
-
-        tdiff = datetime.strptime(
-            firstInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
-
-        result.append("tra <b>" + repr(int(tdiff.seconds / 60)) +
-                      " minuto/i </b>(" + firstInfo[2] + ")")
-
-        if len(nextArr) > 1:
-            second = nextArr[1].strip()
-            secondInfo = second.split()
-
-            result.append("\n" + emo_bus + " [<b>" + secondInfo[0] + "</b>] ")
-
-            if secondInfo[1] == "DaSatellite":
-                result.append(emo_sat + " DA SATELLITE ")
-            else:
-                result.append(emo_clock + " DA ORARIO ")
-
-            tdiff = datetime.strptime(
-                secondInfo[2], '%H:%M') - datetime.strptime(time.strftime('%H:%M'), '%H:%M')
-            result.append("tra <b>" + repr(int(tdiff.seconds / 60)
-                                           ) + " minuto/i </b>(" + secondInfo[2] + ")")
-
-        result.append("\n")
-        result.append(emo_ita)
-        if (line != ""):
-            result.append(" Linea: <b>" + line + "</b>")
-
-        result.append(" Fermata: <b>" + stop +
-                      "</b> " + "<i>("+name+")</i>\n")
-        result.append(emo_eng)
-        if (line != ""):
-            result.append(" Line: <b>" + line + "</b>")
-
-        result.append(" Stop: <b>" + stop +
-                      "</b> " + "<i>("+name+")</i>\n")
-
-        return "".join(result)
-    except:
-        traceback.print_exc()
-        return text
-
-
-def makeNearbyOutput(lat_user, lon_user):
-    result = collections.defaultdict()
-    busLines = collections.defaultdict(list)
-    output = list()
-    stringKeyboardList = list()
-    output.append(emo_ita + " FERMATE VICINE\n" +
-                  emo_eng + " NEARBY STOPS\n\n")
-    for child in xml_root:
-        linea = child[0].text
-        id_fermata = child[1].text
-        nome_fermata = child[2].text
-        lat_fermata = child[7].text
-        lon_fermata = child[8].text
-
-        dist = distance(float(lat_user), float(lon_user),
-                        float(lat_fermata), float(lon_fermata))
-        if (dist < 25):
-
-            element = id_fermata + " - " + nome_fermata + \
-                " (" + repr(int(dist)) + " m)"
-            busLines[element].append(linea)
-            stringKeyboardList.append(id_fermata + " " + linea)
-            if id_fermata not in stringKeyboardList:
-                stringKeyboardList.append(id_fermata)
-
-    for s in busLines.keys():
-        output.append(s)
-        output.append("\n")
-        output.append("Linee: ")
-        for n in busLines[s]:
-            output.append(n + " ")
-        output.append("\n\n")
-
-    stringKeyboardList.sort()
-    result["stringKeyboardList"] = stringKeyboardList
-    result["output_string"] = "".join(output)
-    return result
-
-
-def makeReq(stop, line, time):
-    body = "fermata=" + stop + "&linea=" + line + "&oraHHMM=" + time
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    response = requests.post(url=url, data=body, headers=headers)
-
-    root = ET.fromstring(response.text)
-
-    return parseResponse(stop, line, root.text)
-
-
-def getStopInfo(params):
-    if len(params) >= 3:
-        return makeReq(params[0], params[1], params[2])
-    elif len(params) == 2:
-        return makeReq(params[0], params[1], "")
-    elif len(params) == 1:
-        return makeReq(params[0], "", "")
-    else:
-        return "error"
-
-
-def getStopLocation(stop):
-    if stop == "":
-        return ("LAT not found", "LON not found")
-
-    for child in xml_root:
-        id_fermata = child[1].text
-
-        if id_fermata == stop:
-            lat_fermata = child[7].text
-            lon_fermata = child[8].text
-            return (lat_fermata, lon_fermata)
-    return ("LAT not found", "LON not found")
-
-
-def on_callback_query(msg):
-    try:
-        query_id, from_id, query_data = telepot.glance(
-            msg, flavor='callback_query')
-        msg_edited = (from_id, msg['message']['message_id'])
-        print(from_id, query_data)
+        print(chat_id, query_data)
         if (query_data.startswith("notify")):
             array = query_data.split()
             if len(array) == 3:
@@ -521,30 +523,27 @@ def on_callback_query(msg):
                 end_time.strftime("%H:%M") + "</b>"
             now = datetime.now()
             logging.info(
-                "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(from_id) + " ### NOTIFICATIONS START " + stop + " " + line + " for " + str(
+                "TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") + " ### CHAT_ID = " + str(chat_id) + " ### NOTIFICATIONS START " + stop + " " + line + " for " + str(
                     t) + " min")
-
-            thread = NotifyThread(t, bot, msg, stop, line, output_string)
+            thread = NotifyThread(update, context, t,
+                                  stop, line, output_string)
 
             try:
-                notify_threads[from_id].set_stop_flag(True)
+                notify_threads[chat_id].set_stop_flag(True)
             except:
                 pass
 
-            notify_threads[from_id] = thread
+            notify_threads[chat_id] = thread
             thread.start()
 
             try:
-                bot.editMessageText(
-                    msg_edited, output_string, parse_mode='HTML', reply_markup=makeInlineStopKeyboard((stop, line), t))
-            except telepot.exception.TelegramError:
-                bot.answerCallbackQuery(query_id, text="SLOW DOWN!!")
-
-            except Exception as e:
+                update.callback_query.edit_message_text(
+                    output_string, parse_mode=ParseMode.HTML, reply_markup=makeInlineStopKeyboard((stop, line), t))
+            except:
+                update.callback_query.answer(text="SLOW DOWN!!")
                 traceback.print_exc()
 
-            bot.answerCallbackQuery(
-                query_id, text="NOTIFICATIONS STARTED!")
+            update.callback_query.answer(text="NOTIFICATIONS STARTED!")
 
         elif (query_data.startswith("stop")):
             array = query_data.split()
@@ -559,19 +558,20 @@ def on_callback_query(msg):
                 line = ""
 
             try:
-                notify_threads[from_id].set_stop_flag(True)
+                notify_threads[chat_id].set_stop_flag(True)
             except:
                 pass
 
             output_string = getStopInfo((stop, line))
             output_string += "\n<b>NOTIFICATIONS STOPPED!</b>"
-            bot.answerCallbackQuery(query_id, text="NOTIFICATIONS STOPPED!")
+            update.callback_query.answer(text="NOTIFICATIONS STOPPED!")
 
             try:
-                bot.editMessageText(msg_edited, output_string, parse_mode='HTML',
-                                    reply_markup=makeInlineNotifyKeyboard(from_id, (stop, line)))
-            except telepot.exception.TelegramError:
-                pass
+                update.callback_query.edit_message_text(output_string, parse_mode=ParseMode.HTML,
+                                                        reply_markup=makeInlineNotifyKeyboard(chat_id, (stop, line)))
+            except:
+                update.callback_query.answer(text="SLOW DOWN!!")
+                traceback.print_exc()
 
         elif (query_data.startswith("add")):
             array = query_data.split()
@@ -587,23 +587,23 @@ def on_callback_query(msg):
 
             fav = stop+" "+line
             fav = fav.strip()
-            if fav not in dict_user_favourites[from_id]:
-                addFav(from_id, stop+" "+line)
+            if fav not in dict_user_favourites[chat_id]:
+                addFav(chat_id, stop+" "+line)
 
                 output_string = "<b>" + stop + " " + line+" WAS ADDED TO YOUR FAVOURITES</b>"
 
-                bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                                reply_markup=makeFavouritesKeyboard(from_id))
+                update.callback_query.message.reply_html(
+                    output_string, reply_markup=makeFavouritesKeyboard(chat_id))
                 output_string = getStopInfo((stop, line))
 
-                bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                                reply_markup=makeInlineNotifyKeyboard(from_id, (stop, line)))
+                update.callback_query.message.reply_html(
+                    output_string, reply_markup=makeInlineNotifyKeyboard(chat_id, (stop, line)))
             else:
                 output_string = "<b>" + stop + " " + line + \
                     " ALREADY IN YOUR FAVOURITES</b>"
 
-                bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                                reply_markup=makeFavouritesKeyboard(from_id))
+                update.callback_query.message.reply_html(
+                    output_string, reply_markup=makeFavouritesKeyboard(chat_id))
 
         elif (query_data.startswith("remove")):
             array = query_data.split()
@@ -621,172 +621,150 @@ def on_callback_query(msg):
 
             fav = stop+" "+line
             fav = fav.strip()
-            if fav in dict_user_favourites[from_id]:
+            if fav in dict_user_favourites[chat_id]:
 
-                rmFav(from_id, stop+" "+line)
+                rmFav(chat_id, stop+" "+line)
 
                 output_string = "<b>" + stop + " " + line + \
                     " WAS REMOVED FROM YOUR FAVOURITES</b>"
 
-                bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                                reply_markup=makeFavouritesKeyboard(from_id))
+                update.callback_query.message.reply_html(
+                    output_string, reply_markup=makeFavouritesKeyboard(chat_id))
             else:
-                output_string = "<b>" + stop + " " + line + \
-                    " NOT IN YOUR FAVOURITES</b>"
+                output_string = "<b>" + stop + " " + line + " NOT IN YOUR FAVOURITES</b>"
 
-                bot.sendMessage(from_id, output_string, parse_mode='HTML',
-                                reply_markup=makeFavouritesKeyboard(from_id))
+                update.callback_query.message.reply_html(
+                    output_string, reply_markup=makeFavouritesKeyboard(chat_id))
 
-    except telepot.exception.TelegramError:
-        bot.answerCallbackQuery(query_id, text="SLOW DOWN!!")
-        traceback.print_exc()
-
-    except Exception as e:
+    except:
+        update.callback_query.answer(text="SLOW DOWN!!")
         traceback.print_exc()
 
 
-def on_chat_message(msg):
-    content_type, chat_type, chat_id = telepot.glance(msg)
-    msg.pop("chat", None)
-    msg.pop("from", None)
-    print(msg)
+def start(update, context):
+    chat_id = update.message.chat_id
+    output_string = emo_bus + " TPER HelloBus on Telegram! " + \
+        emo_bus + "\n\n" + help_string
+    update.message.reply_html(
+        output_string, reply_markup=makeFavouritesKeyboard(chat_id))
+
+
+def help(update, context):
+    chat_id = update.message.chat_id
+    update.message.reply_html(
+        help_string, reply_markup=makeMainKeyboard(chat_id))
+
+
+def message(update, context):
+    chat_id = update.message.chat_id
+    text = update.message.text
+
+    print(chat_id, text)
     now = datetime.now()
     logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
-                 " ### MESSAGE from " + str(chat_id) + " = " + str(msg))
+                 " ### MESSAGE from " + str(chat_id) + " = " + text)
 
     try:
-        if content_type == "text":
-            if msg["text"] == "/start":
 
-                output_string = emo_bus + " TPER HelloBus on Telegram! " + \
-                    emo_bus + "\n\n" + help_string
-                bot.sendMessage(
-                    chat_id, output_string, parse_mode='HTML', reply_markup=makeFavouritesKeyboard(chat_id))
-            elif msg["text"] == "/help":
+        if text == emo_help+" HELP":
 
-                bot.sendMessage(chat_id, help_string, parse_mode='HTML',
-                                reply_markup=makeMainKeyboard(chat_id))
+            update.message.reply_html(
+                help_string, reply_markup=makeMainKeyboard(chat_id))
 
-            elif msg["text"] == emo_help+" HELP":
+        elif text == emo_privacy+" PRIVACY POLICY":
 
-                bot.sendMessage(chat_id, help_string, parse_mode='HTML',
-                                reply_markup=makeMainKeyboard(chat_id))
+            update.message.reply_html(
+                privacy_string, reply_markup=makeMainKeyboard(chat_id))
+        elif text == emo_fav+" FAVOURITES":
 
-            elif msg["text"] == emo_privacy+" PRIVACY POLICY":
-
-                bot.sendMessage(chat_id, privacy_string, parse_mode='HTML',
-                                reply_markup=makeMainKeyboard(chat_id))
-            elif msg["text"] == emo_fav+" FAVOURITES":
-
-                output_string = msg["text"]
-                bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                reply_markup=makeFavouritesKeyboard(chat_id))
-            elif msg["text"] == emo_back + " BACK TO MAIN":
-                output_string = msg["text"]
-                bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                reply_markup=makeMainKeyboard(chat_id))
-
-            else:
-                if "-" in msg["text"]:
-                    mess = msg["text"].split("-")
-                    mess = ''.join(mess[0].strip())
-
-                else:
-                    mess = msg["text"]
-
-                stop = mess.split()[0]
-
-                params = mess.split()
-                output_string = getStopInfo(params)
-                # addFav(chat_id, mess)
-                if "<b>help</b>" in output_string.lower() or "hellobushelp" in output_string.lower():
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                    reply_markup=makeMainKeyboard(chat_id))
-                else:
-                    bot.sendMessage(chat_id, donation_string,
-                                    parse_mode='HTML')
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                    reply_markup=makeInlineNotifyKeyboard(chat_id, params))
-
-        elif content_type == "location":
-
-            lat_user = msg["location"]["latitude"]
-            lon_user = msg["location"]["longitude"]
-
-            output = makeNearbyOutput(lat_user, lon_user)
-            bot.sendMessage(chat_id, donation_string, parse_mode='HTML')
-
-            bot.sendMessage(chat_id, output["output_string"], parse_mode='HTML',
-                            reply_markup=makeLocationKeyboard(output["stringKeyboardList"]))
-
-        elif content_type == "voice":
-
-            bot.download_file(msg["voice"]["file_id"], audio_file + ".ogg")
-            audio_ogg = AudioSegment.from_ogg(audio_file + ".ogg")
-            audio_ogg.export(audio_file + ".wav", format="wav")
-
-            with sr.AudioFile(audio_file + ".wav") as source:
-                audio = audio_recognizer.record(source)
-
-            try:
-                string_from_audio = audio_recognizer.recognize_google(
-                    audio, language="it-IT")
-            except sr.UnknownValueError:
-                print("Google Speech Recognition could not understand audio")
-                string_from_audio = ""
-            except sr.RequestError as e:
-                string_from_audio = ""
-                print(
-                    "Could not request results from Google Speech Recognition service; {0}".format(e))
-
-            logging.info("TIMESTAMP = " + now.strftime("%b %d %Y %H:%M:%S") +
-                         " ### AUDIO TEXT from " + str(chat_id) + " = " + string_from_audio)
-            try:
-                stop = string_from_audio.split()[0]
-            except:
-                stop = ""
-
-            params = string_from_audio.split()
-            output_string = getStopInfo(params)
-            if output_string == "error":
-                output_string = emo_ita + " Parla chiaro! Pronuncia\n\"NUMERO_FERMATA\"\noppure\n\"NUMERO_FERMATA LINEA\"\n" + \
-                    emo_eng + " Speak clearly! Say \n\"STOP_NUMBER\"\nor\n\"STOP_NUMBER LINE\""
-                bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                reply_markup=makeMainKeyboard(chat_id))
-            else:
-
-                # addFav(chat_id, string_from_audio)
-                bot.sendMessage(chat_id, donation_string, parse_mode='HTML',
-                                reply_markup=makeMainKeyboard(chat_id))
-                bot.sendMessage(chat_id, "AUDIO TEXT: \"" +
-                                string_from_audio + "\"", parse_mode='HTML')
-                if "<b>help</b>" in output_string.lower() or "hellobushelp" in output_string.lower():
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                    reply_markup=makeMainKeyboard(chat_id))
-                else:
-                    bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                                    reply_markup=makeInlineNotifyKeyboard(chat_id, params))
+            output_string = text
+            update.message.reply_html(
+                output_string, reply_markup=makeFavouritesKeyboard(chat_id))
+        elif text == emo_back + " BACK TO MAIN":
+            output_string = text
+            update.message.reply_html(
+                output_string, reply_markup=makeMainKeyboard(chat_id))
 
         else:
+            if "-" in text:
+                mess = text.split("-")
+                mess = ''.join(mess[0].strip())
 
-            output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
-                emo_eng + " I don't understand... Send a message or your location"
-            bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                            reply_markup=makeMainKeyboard(chat_id))
+            else:
+                mess = text
 
-    except Exception as e:
+            stop = mess.split()[0]
+
+            params = mess.split()
+            output_string = getStopInfo(params)
+            # addFav(chat_id, mess)
+            if "<b>help</b>" in output_string.lower() or "hellobushelp" in output_string.lower():
+                update.message.reply_html(
+                    output_string, reply_markup=makeMainKeyboard(chat_id))
+            else:
+                update.message.reply_html(donation_string)
+                update.message.reply_html(
+                    output_string, reply_markup=makeInlineNotifyKeyboard(chat_id, params))
+
+    except:
         traceback.print_exc()
         output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
             emo_eng + " I don't understand... Send a message or your location"
-        bot.sendMessage(chat_id, output_string, parse_mode='HTML',
-                        reply_markup=makeMainKeyboard(chat_id))
+        update.message.reply_html(
+            output_string, reply_markup=makeMainKeyboard(chat_id))
 
 
-restoreFavourites()
-MessageLoop(bot, {'chat': on_chat_message,
-                  'callback_query': on_callback_query}).run_as_thread()
+def location(update, context):
+    try:
+        chat_id = update.message.chat_id
+        location = update.message.location
 
-print('Listening ...')
-# Keep the program running.
-while 1:
-    time.sleep(10)
+        lat_user = location.latitude
+        lon_user = location.longitude
+
+        output = makeNearbyOutput(lat_user, lon_user)
+        update.message.reply_html(donation_string)
+
+        update.message.reply_html(output["output_string"], reply_markup=makeLocationKeyboard(
+            output["stringKeyboardList"]))
+    except:
+        traceback.print_exc()
+        output_string = emo_ita + " Non ho capito... Invia un messaggio o la tua posizione!\n" + \
+            emo_eng + " I don't understand... Send a message or your location"
+        update.message.reply_html(
+            output_string, reply_markup=makeMainKeyboard(chat_id))
+
+
+def error(update, context):
+    logging.warning('MESSAGE "%s" CAUSED ERROR "%s"',
+                    update.message, context.error)
+
+
+def main():
+
+    restoreFavourites()
+
+    updater = Updater(token, use_context=True)
+
+    updater.dispatcher.add_handler(CommandHandler("start", start))
+    updater.dispatcher.add_handler(CommandHandler("help", help))
+
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, message))
+    updater.dispatcher.add_handler(CallbackQueryHandler(callback_query))
+    updater.dispatcher.add_handler(MessageHandler(Filters.location, location))
+
+    updater.dispatcher.add_error_handler(error)
+
+    # Start the Bot
+    print('Listening ...')
+
+    updater.start_polling()
+
+    # Run the bot until you press Ctrl-C or the process receives SIGINT,
+    # SIGTERM or SIGABRT. This should be used most of the time, since
+    # start_polling() is non-blocking and will stop the bot gracefully.
+    updater.idle()
+
+
+if __name__ == '__main__':
+    main()
