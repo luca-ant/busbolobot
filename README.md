@@ -36,7 +36,7 @@ cd
 * Clone repository.
 ```
 git clone https://github.com/luca-ant/busbolobot.git
-cd busboloubot
+cd busbolobot
 ```
 or
 ```
