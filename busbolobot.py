@@ -20,10 +20,7 @@ from telegram import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, I
 from threading import Lock, Thread
 
 
-with open(sys.argv[1]) as f:
-    token = f.read().strip()
-f.close()
-
+token = os.environ['BUS_BOT_TOKEN']
 
 emo_clock = u'\U0001F552'
 emo_sat = u'\U0001F6F0'
