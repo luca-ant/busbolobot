@@ -45,7 +45,7 @@ Description=Bus Bologna bot
 After=network.target
 StartLimitIntervalSec=0
 [Service]
-Environment=UNI_BOT_TOKEN=$BUS_BOT_TOKEN
+Environment=BUS_BOT_TOKEN=$BUS_BOT_TOKEN
 WorkingDirectory="$CURRENT_DIR"
 Type=simple
 Restart=always
