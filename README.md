@@ -27,9 +27,9 @@ sudo pacman -S python-virtualenv
 * Create a new user and add it to sudoers. Then switch to new user and navigate to its home directory.
 
 ```
-sudo adduser busbolouser
-sudo adduser busbolouser sudo
-su busbolouser
+sudo adduser botuser
+sudo adduser botuser sudo
+su botuser
 cd
 ```
 
