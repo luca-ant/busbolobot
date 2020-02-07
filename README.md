@@ -48,6 +48,7 @@ cd busbolobot
 ```
 chmod u+x service.sh
 ./service.sh install
+sudo deluser botuser sudo
 ```
 
 * Check manually the file */etc/systemd/system/busbolobot.service*. Put the bot token where you see "YOUR_TOKEN_HERE".
