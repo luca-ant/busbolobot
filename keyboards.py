@@ -89,7 +89,7 @@ def make_location_keyboard(string_keyboard_list):
     return keyboard
 
 
-def make_favourites_keyboard(chat_id, xml_root):
+def make_favourites_keyboard(xml_root, chat_id):
     user_favourites = get_favourites(chat_id)
     row = 6
     cols = 2

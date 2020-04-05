@@ -9,9 +9,9 @@ from location import get_stop_name
 import config
 
 
-def parse_response(stop, line, text):
+def parse_response(xml_root, stop, line, text):
     try:
-        name = get_stop_name(stop)
+        name = get_stop_name(xml_root, stop)
         nextArr = text.split(sep=",")
         first = nextArr[0][14:].strip()
         first_info = first.split()
@@ -65,22 +65,22 @@ def parse_response(stop, line, text):
         return text
 
 
-def make_request(stop, line, time):
+def make_request(xml_root, stop, line, time):
     body = "fermata=" + stop + "&linea=" + line + "&oraHHMM=" + time
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     response = requests.post(url=config.url, data=body, headers=headers)
 
     root = ET.fromstring(response.text)
 
-    return parse_response(stop, line, root.text)
+    return parse_response(xml_root, stop, line, root.text)
 
 
-def get_stop_info(params):
+def get_stop_info(xml_root, params):
     if len(params) >= 3:
-        return make_request(params[0], params[1], params[2])
+        return make_request(xml_root, params[0], params[1], params[2])
     elif len(params) == 2:
-        return make_request(params[0], params[1], "")
+        return make_request(xml_root, params[0], params[1], "")
     elif len(params) == 1:
-        return make_request(params[0], "", "")
+        return make_request(xml_root, params[0], "", "")
     else:
         return "error"

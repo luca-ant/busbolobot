@@ -56,7 +56,7 @@ class NotifyThread(Thread):
                 time.sleep(60)
                 if self.stop_flag:
                     break
-                output_string = get_stop_info((self.stop, self.line))
+                output_string = get_stop_info(xml_root, (self.stop, self.line))
                 output_string += "\n<b>NOTIFICATIONS UP TO " + \
                     self.end_time.strftime("%H:%M")+"</b>"
                 self.last_message = output_string
@@ -130,7 +130,7 @@ def callback_query(update, context):
 
             end_time = datetime.now() + timedelta(minutes=t)
 
-            output_string = get_stop_info((stop, line))
+            output_string = get_stop_info(xml_root, (stop, line))
             output_string += "\n<b>NOTIFICATIONS STARTED UP TO " + \
                 end_time.strftime("%H:%M") + "</b>"
             now = datetime.now()
@@ -174,7 +174,7 @@ def callback_query(update, context):
             except:
                 pass
 
-            output_string = get_stop_info((stop, line))
+            output_string = get_stop_info(xml_root, (stop, line))
             output_string += "\n<b>NOTIFICATIONS STOPPED!</b>"
             update.callback_query.answer(text="NOTIFICATIONS STOPPED!")
 
@@ -206,7 +206,7 @@ def callback_query(update, context):
 
                 update.callback_query.message.reply_html(
                     output_string, reply_markup=make_favourites_keyboard(xml_root, chat_id))
-                output_string = get_stop_info((stop, line))
+                output_string = get_stop_info(xml_root, (stop, line))
 
                 update.callback_query.message.reply_html(
                     output_string, reply_markup=make_inline_notify_keyboard(chat_id, (stop, line)))
@@ -242,7 +242,7 @@ def callback_query(update, context):
 
                 update.callback_query.message.reply_html(
                     output_string, reply_markup=make_favourites_keyboard(xml_root, chat_id))
-                output_string = get_stop_info((stop, line))
+                output_string = get_stop_info(xml_root, (stop, line))
 
                 update.callback_query.message.reply_html(
                     output_string, reply_markup=make_inline_notify_keyboard(chat_id, (stop, line)))
@@ -260,7 +260,7 @@ def callback_query(update, context):
 def start(update, context):
     chat_id = update.message.chat_id
     output_string = config.emo_bus + " TPER HelloBus on Telegram! " + \
-        config.emo_bus + "\n\n" + help_string
+        config.emo_bus + "\n\n" + config.help_string
     update.message.reply_html(
         output_string, reply_markup=make_favourites_keyboard(xml_root, chat_id))
 
@@ -268,7 +268,7 @@ def start(update, context):
 def help(update, context):
     chat_id = update.message.chat_id
     update.message.reply_html(
-        help_string, reply_markup=make_main_keyboard(chat_id))
+        config.help_string, reply_markup=make_main_keyboard(chat_id))
 
 
 def message(update, context):
@@ -286,7 +286,7 @@ def message(update, context):
         if text == config.emo_help+" HELP":
 
             update.message.reply_html(
-                help_string, reply_markup=make_main_keyboard(chat_id))
+                config.help_string, reply_markup=make_main_keyboard(chat_id))
 
         elif text == config.emo_privacy+" PRIVACY POLICY":
 
@@ -313,7 +313,7 @@ def message(update, context):
             stop = mess.split()[0]
 
             params = mess.split()
-            output_string = get_stop_info(params)
+            output_string = get_stop_info(xml_root, params)
             if "<b>help</b>" in output_string.lower() or "hellobushelp" in output_string.lower():
                 update.message.reply_html(
                     output_string, reply_markup=make_main_keyboard(chat_id))
