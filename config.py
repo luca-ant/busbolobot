@@ -40,7 +40,7 @@ data_dir = working_dir+"busbolobot_data/"
 xml_stops_file = data_dir+"lineefermate.xml"
 favourites_dir = data_dir+"favourites/"
 download_dir = working_dir+"download/"
-logging.basicConfig(filename="busbolobot.log", level=logging.INFO)
+logging.basicConfig(filename=working_dir+"busbolobot.log", level=logging.INFO)
 
 
 
