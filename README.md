@@ -89,7 +89,7 @@ export BUS_BOT_TOKEN=YOUR_TOKEN_HERE
 * Run the python script as:
 
 ```
-python unibotimetablesbot/unibotimetablesbot.py
+python busbolobot.py
 ```
 
 ## Credits
