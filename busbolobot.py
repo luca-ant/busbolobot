@@ -363,9 +363,11 @@ def update_stops_file():
     y = now.strftime("%Y")
     m = now.strftime("%m")
     d = now.strftime("%d")
-
+    d = str(int(d) - 1).zfill(2)
     xml_url = 'https://solweb.tper.it/web/tools/open-data/open-data-download.aspx?source=solweb.tper.it&filename=lineefermate&version={}{}{}&format=xml'.format(y,m,d) 
-
+    
+    print(xml_url)
+    
     zip_name = wget.download(xml_url, out=config.download_dir+"lineefermate_{}{}{}.zip".format(y,m,d) )
     print()
     if zipfile.is_zipfile(zip_name):
@@ -377,6 +379,8 @@ def update_stops_file():
 
         xml_file = 'lineefermate_{}{}{}.xml'.format(y,m,d)
         shutil.copy(config.download_dir+xml_file, config.xml_stops_file)
+        logging.info("### STOPS FILE UPDATED!")
+        print("### STOPS FILE UPDATED!")
 
     global xml_root
 
