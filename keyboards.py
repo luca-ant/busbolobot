@@ -21,8 +21,8 @@ def make_inline_stop_keyboard(params, time):
                               callback_data="stop " + s)],
         [InlineKeyboardButton(text=config.emo_notify + ' RESTART for 5 min',
                               callback_data="notify " + s + " 5")],
-        [InlineKeyboardButton(text=config.emo_notify + ' RESTART for 10 min',
-                              callback_data="notify " + s + " 10")]
+        [InlineKeyboardButton(text=config.emo_notify + ' RESTART for 15 min',
+                              callback_data="notify " + s + " 15")]
 
     ])
     return keyboard
@@ -45,10 +45,10 @@ def make_inline_notify_keyboard(chat_id, params):
                                   callback_data="remove " + s)],
             [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 5 min',
                                   callback_data="notify " + s + " 5")],
-            [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 10 min',
-                                  callback_data="notify " + s + " 10")],
             [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 15 min',
-                                  callback_data="notify " + s + " 15")]
+                                  callback_data="notify " + s + " 15")],
+            [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 30 min',
+                                  callback_data="notify " + s + " 30")]
         ])
 
     else:
@@ -57,10 +57,10 @@ def make_inline_notify_keyboard(chat_id, params):
                                   callback_data="add " + s)],
             [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 5 min',
                                   callback_data="notify " + s + " 5")],
-            [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 10 min',
-                                  callback_data="notify " + s + " 10")],
             [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 15 min',
-                                  callback_data="notify " + s + " 15")]
+                                  callback_data="notify " + s + " 15")],
+            [InlineKeyboardButton(text=config.emo_notify + ' NOTIFY for 30 min',
+                                  callback_data="notify " + s + " 30")]
         ])
     return keyboard
 
